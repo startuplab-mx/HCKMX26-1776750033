@@ -12,10 +12,10 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 ROOT         = Path(__file__).parent
-LEXICON_PATH = ROOT.parent / "centinela_data_explorer" / "lexicon" / "narco_lexicon.json"
-MAX_QUERIES  = 10
+LEXICON_PATH = ROOT / "lexicon" / "narco_lexicon.json"
+MAX_QUERIES  = None  # None = todas las queries del lexicon
 
-load_dotenv(ROOT.parent / "centinela_data_explorer" / ".env")
+load_dotenv(ROOT / ".env")
 
 sys.path.insert(0, str(ROOT / "ETL"))
 sys.path.insert(0, str(ROOT / "ETL" / "ETL_youtube"))
