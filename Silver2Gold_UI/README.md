@@ -44,3 +44,4 @@ Esto levanta:
 - npm run server:dev: API en modo watch con nodemon
 - npm run dev:full: frontend + backend en paralelo
 - npm run build: build de frontend
+- npm run export: exporta la base de datos Golden a Excel (guarda en `exports_golden/`)

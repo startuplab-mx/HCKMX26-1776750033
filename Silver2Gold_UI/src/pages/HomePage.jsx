@@ -11,6 +11,21 @@ const RISK_LABELS = [
   { value: 'reclutamiento',    label: 'Reclutamiento' },
 ]
 
+const DEMO_TIKTOK_VIDEOS = [
+  {
+    _id: 'demo-2',
+    autor_username: 'isabelmorales3306',
+    url: 'https://www.tiktok.com/@isabelmorales3306/video/7630267537321708820',
+    descripcion: '',
+  },
+  {
+    _id: 'demo-1',
+    autor_username: 'user6kldybe73w',
+    url: 'https://www.tiktok.com/@user6kldybe73w/video/7617323685342366994',
+    descripcion: '',
+  },
+]
+
 const PLATFORM_CONFIG = [
   {
     id: 'youtube',
@@ -44,7 +59,7 @@ function HomePage({ currentUser = 'Analista' }) {
   const [catalog, setCatalog]                     = useState([])
   const [catalogError, setCatalogError]           = useState('')
   const [platformCounts, setPlatformCounts]       = useState({})
-  const [activePlatform, setActivePlatform]       = useState('telegram')
+  const [activePlatform, setActivePlatform]       = useState('tiktok')
   const [tiktokType, setTiktokType]               = useState(TIKTOK_TYPES.VIDEOS)
   const [telegramType, setTelegramType]           = useState(TELEGRAM_TYPES.MESSAGES)
   const [items, setItems]                         = useState([])
@@ -335,6 +350,21 @@ function HomePage({ currentUser = 'Analista' }) {
     }
   }
 
+  useEffect(() => {
+    function onKey(e) {
+      if (e.target.tagName === 'INPUT') return
+      if (!currentItem) return
+      if (e.key === 'ArrowRight') { handleSkip(); return }
+      if (e.key === 'Enter' && !submitLoading && selectedLabels.length > 0) { handleSendDecision(); return }
+      if (e.key === 's' || e.key === 'S') { handleToggleLabel('seguro'); return }
+      if (e.key === '1') { handleToggleLabel('narcocultura'); return }
+      if (e.key === '2') { handleToggleLabel('oferta de riesgo'); return }
+      if (e.key === '3') { handleToggleLabel('reclutamiento'); return }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [currentItem, selectedLabels, submitLoading])
+
   const maxCount = Math.max(1, ...PLATFORM_CONFIG.map((p) => platformCounts[p.id] || 0))
 
   return (
@@ -386,6 +416,28 @@ function HomePage({ currentUser = 'Analista' }) {
         </nav>
 
         {catalogError && <p className="error-note">{catalogError}</p>}
+
+        <div className="sidebar__session">
+          <h2 className="sidebar__title">Sesión actual</h2>
+          <div className="sidebar-stats">
+            <div className="sidebar-stat">
+              <strong>{sessionReviewed}</strong>
+              <span>Revisados</span>
+            </div>
+            <div className="sidebar-stat sidebar-stat--golden">
+              <strong>{sessionGolden}</strong>
+              <span>A Golden</span>
+            </div>
+            <div className="sidebar-stat sidebar-stat--safe">
+              <strong>{sessionSafe}</strong>
+              <span>Seguros</span>
+            </div>
+            <div className="sidebar-stat">
+              <strong>{sessionReviewed > 0 ? `${((sessionGolden / sessionReviewed) * 100).toFixed(0)}%` : '—'}</strong>
+              <span>Riesgo</span>
+            </div>
+          </div>
+        </div>
       </aside>
 
       {/* ── MAIN ─────────────────────────────────── */}
@@ -475,85 +527,146 @@ function HomePage({ currentUser = 'Analista' }) {
         {selectedCollection && currentItem ? (
           <article className="review-card">
 
-            {/* NLP badge */}
+            {/* Banner IA — ancho completo */}
             {currentItem.nlp.categoria ? (
-              <div className={`nlp-badge nlp-badge--${currentItem.nlp.nivel || 'medio'}`}>
-                <span className="nlp-badge__label">IA detectó</span>
-                <strong className="nlp-badge__categoria">{currentItem.nlp.categoria}</strong>
+              <div className={`nlp-banner nlp-banner--${currentItem.nlp.nivel || 'medio'}`}>
+                <span className="nlp-banner__dot" />
+                <span className="nlp-banner__label">IA detectó</span>
+                <strong className="nlp-banner__categoria">{currentItem.nlp.categoria}</strong>
                 {currentItem.nlp.score !== null && (
-                  <span className="nlp-badge__score">
+                  <span className="nlp-banner__score">
                     {(currentItem.nlp.score * 100).toFixed(0)}%
                     {currentItem.nlp.nivel ? ` · ${currentItem.nlp.nivel.toUpperCase()}` : ''}
                   </span>
                 )}
               </div>
             ) : (
-              <div className="nlp-badge nlp-badge--unknown">
-                <span className="nlp-badge__label">Sin clasificación IA</span>
+              <div className="nlp-banner nlp-banner--unknown">
+                <span className="nlp-banner__dot" />
+                <span className="nlp-banner__label">Sin clasificación IA</span>
               </div>
             )}
 
-            {/* Source */}
-            <div className="review-card__source">
-              <span className="review-card__source-tag">{activeConfig?.label}</span>
-              <strong>{currentItem.source}</strong>
-            </div>
+            {/* Cuerpo: 2 columnas */}
+            <div className="card-body">
 
-            {/* Content */}
-            <p className="review-card__text">{currentItem.text}</p>
+              {/* IZQUIERDA: contenido + fuente */}
+              <div className="card-content">
+                <div className="review-card__source">
+                  <span className="review-card__source-tag">{activeConfig?.label}</span>
+                  <strong>{currentItem.source}</strong>
+                </div>
 
-            {/* URL */}
-            {currentItem.url && (
-              <a className="review-card__link" href={currentItem.url} target="_blank" rel="noopener noreferrer">
-                Ver fuente original →
-              </a>
-            )}
+                {/* Embed TikTok si hay video ID en la URL */}
+                {activePlatform === 'tiktok' && (() => {
+                  const videoId = currentItem.url?.match(/\/video\/(\d+)/)?.[1]
+                  if (!videoId) return <p className="review-card__text">{currentItem.text}</p>
+                  return (
+                    <div className="platform-embed">
+                      <iframe
+                        key={videoId}
+                        src={`https://www.tiktok.com/embed/v2/${videoId}`}
+                        className="tiktok-frame"
+                        allowFullScreen
+                        allow="encrypted-media"
+                        title="Vista previa TikTok"
+                      />
+                    </div>
+                  )
+                })()}
 
-            {/* Labels */}
-            <div className="label-section">
-              <p className="label-section__hint">¿Cómo clasificas este contenido?</p>
-              <div className="label-section__row">
-                <button type="button"
-                  className={`label-btn label-btn--safe ${selectedLabels.includes('seguro') ? 'is-selected' : ''}`}
-                  onClick={() => handleToggleLabel('seguro')}>
-                  ✓ Seguro
-                </button>
-                <span className="label-section__divider">o</span>
-                <div className="label-section__risks">
-                  {RISK_LABELS.map((opt) => (
-                    <button key={opt.value} type="button"
-                      className={`label-btn label-btn--risk ${selectedLabels.includes(opt.value) ? 'is-selected' : ''}`}
-                      onClick={() => handleToggleLabel(opt.value)}>
-                      {opt.label}
-                    </button>
-                  ))}
+                {activePlatform !== 'tiktok' && (
+                  <p className="review-card__text">{currentItem.text}</p>
+                )}
+
+                {/* CTA principal */}
+                {currentItem.url ? (
+                  <a className="source-cta" href={currentItem.url} target="_blank" rel="noopener noreferrer">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/>
+                      <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                    <div className="source-cta__text">
+                      <span className="source-cta__label">Ver fuente original</span>
+                      <span className="source-cta__sub">Verifica el contenido antes de clasificar</span>
+                    </div>
+                  </a>
+                ) : (
+                  <div className="source-cta source-cta--disabled">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <div className="source-cta__text">
+                      <span className="source-cta__label">Sin enlace disponible</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DERECHA: clasificación + acciones */}
+              <div className="card-actions">
+                <p className="label-section__hint">¿Cómo clasificas este contenido?</p>
+                <div className="label-grid">
+                  <button type="button"
+                    className={`label-card label-card--safe ${selectedLabels.includes('seguro') ? 'is-selected' : ''}`}
+                    onClick={() => handleToggleLabel('seguro')}>
+                    <span className="label-card__icon">✓</span>
+                    <span className="label-card__name">Seguro</span>
+                  </button>
+                  {RISK_LABELS.map((opt) => {
+                    const slug = opt.value.replace(/ /g, '-')
+                    const isAiSuggested = currentItem?.nlp?.categoria?.toLowerCase().includes(opt.value.toLowerCase())
+                    return (
+                      <button key={opt.value} type="button"
+                        className={`label-card label-card--${slug} ${selectedLabels.includes(opt.value) ? 'is-selected' : ''} ${isAiSuggested ? 'is-ai-suggested' : ''}`}
+                        onClick={() => handleToggleLabel(opt.value)}>
+                        {isAiSuggested && <span className="label-card__ai-badge">IA</span>}
+                        <span className="label-card__icon">⚠</span>
+                        <span className="label-card__name">{opt.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {selectedLabels.length > 0 && (
+                  <p className="label-selection">
+                    Clasificado como: <strong>{selectedLabels.join(' + ')}</strong>
+                  </p>
+                )}
+
+                <div className="review-card__actions">
+                  <button type="button" className="action-btn action-btn--skip" onClick={handleSkip}>
+                    Saltar
+                  </button>
+                  <button type="button"
+                    className={`action-btn action-btn--send ${selectedLabels.includes('seguro') ? 'action-btn--safe-mode' : ''}`}
+                    onClick={handleSendDecision}
+                    disabled={submitLoading || selectedLabels.length === 0}>
+                    {submitLoading
+                      ? 'Enviando...'
+                      : selectedLabels.includes('seguro')
+                        ? '✓ Marcar como seguro'
+                        : 'Enviar a Golden →'}
+                  </button>
+                </div>
+
+                {submitError && <p className="submit-error">{submitError}</p>}
+
+                <div className="kbd-hints">
+                  <div className="kbd-row">
+                    <span className="kbd-hint"><kbd>S</kbd> Seguro</span>
+                    <span className="kbd-hint"><kbd>1</kbd> Narco</span>
+                    <span className="kbd-hint"><kbd>2</kbd> Oferta</span>
+                  </div>
+                  <div className="kbd-row">
+                    <span className="kbd-hint"><kbd>3</kbd> Reclutamiento</span>
+                    <span className="kbd-hint"><kbd>→</kbd> Saltar</span>
+                    <span className="kbd-hint"><kbd>↵</kbd> Enviar</span>
+                  </div>
                 </div>
               </div>
-              {selectedLabels.length > 0 && (
-                <p className="label-selection">
-                  Selección: <strong>{selectedLabels.join(' + ')}</strong>
-                </p>
-              )}
             </div>
-
-            {/* Actions */}
-            <div className="review-card__actions">
-              <button type="button" className="action-btn action-btn--skip" onClick={handleSkip}>
-                Saltar
-              </button>
-              <button type="button"
-                className="action-btn action-btn--send"
-                onClick={handleSendDecision}
-                disabled={submitLoading || selectedLabels.length === 0}>
-                {submitLoading
-                  ? 'Enviando...'
-                  : selectedLabels.includes('seguro')
-                    ? 'Marcar seguro'
-                    : 'Enviar a Golden →'}
-              </button>
-            </div>
-
-            {submitError && <p className="submit-error">{submitError}</p>}
           </article>
         ) : (
           <div className="review-empty">
@@ -565,25 +678,6 @@ function HomePage({ currentUser = 'Analista' }) {
           </div>
         )}
 
-        {/* Session stats */}
-        <div className="session-stats">
-          <div className="session-stat">
-            <strong>{sessionReviewed}</strong>
-            <span>Revisados</span>
-          </div>
-          <div className="session-stat session-stat--golden">
-            <strong>{sessionGolden}</strong>
-            <span>A Golden</span>
-          </div>
-          <div className="session-stat session-stat--safe">
-            <strong>{sessionSafe}</strong>
-            <span>Seguros</span>
-          </div>
-          <div className="session-stat">
-            <strong>{sessionReviewed > 0 ? `${((sessionGolden / sessionReviewed) * 100).toFixed(0)}%` : '—'}</strong>
-            <span>Tasa riesgo</span>
-          </div>
-        </div>
       </main>
     </div>
   )

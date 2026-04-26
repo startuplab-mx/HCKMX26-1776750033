@@ -10,9 +10,15 @@ export async function connectToDatabase() {
     }
   }
 
-  await mongoose.connect(mongoUri)
-
-  return { connected: true }
+  try {
+    await mongoose.connect(mongoUri)
+    return { connected: true }
+  } catch (error) {
+    return {
+      connected: false,
+      reason: error.message,
+    }
+  }
 }
 
 export function getDbConnectionState() {

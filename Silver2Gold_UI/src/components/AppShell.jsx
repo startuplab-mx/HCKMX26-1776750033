@@ -9,8 +9,8 @@ function AppShell({ children, currentUser = 'Asharet' }) {
             alt="Logo del proyecto"
           />
           <div className="app-shell__brand-copy">
-            <p className="app-shell__subtitle">Monitor de riesgo en redes sociales</p>
             <h1>Chimalli</h1>
+            <span className="app-shell__subtitle">Monitor de riesgo en redes sociales</span>
           </div>
         </div>
 
@@ -23,7 +23,7 @@ function AppShell({ children, currentUser = 'Asharet' }) {
         </div>
       </header>
 
-      <main className="app-shell__main">{children}</main>
+      <main className="app-shell__main" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>{children}</main>
     </div>
   )
 }

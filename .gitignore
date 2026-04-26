@@ -5,9 +5,12 @@
 test_data/
 .DS_Store
 *.jpeg
+!assets/**
 *.mp3
 *.mp4
 *.txt
+*.xlsx
+exports_golden/
 test_folder/
 **toast.py
 db_connection.py
