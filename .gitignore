@@ -12,3 +12,8 @@ test_folder/
 **toast.py
 db_connection.py
 *.db
+data/
+*.pyc
+*.session
+*.session-journal
+
