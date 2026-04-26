@@ -110,8 +110,8 @@ def ejecutar_filtro_telegram_messages(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {"message_text": {"$exists": True, "$nin": ["", None]},
-              "_id":          {"$nin": list(ya_en_silver)}}
+    filtro = {"text": {"$exists": True, "$nin": ["", None]},
+              "_id":  {"$nin": list(ya_en_silver)}}
     total = bronze_col.count_documents(filtro)
     print(f"  Telegram Messages  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
@@ -137,7 +137,7 @@ def ejecutar_filtro_telegram_messages(clf=None):
             print(f"  {msg_id:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
-        texto = str(doc.get("message_text", "")).strip()[:MAX_TEXTO_CHARS]
+        texto = str(doc.get("text", "")).strip()[:MAX_TEXTO_CHARS]
         if len(texto) < MIN_TEXTO_CHARS:
             continue
 
