@@ -11,6 +11,7 @@ Pipeline completo para los IDs de NEW_IDS:
 """
 
 import json
+import os
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -18,7 +19,10 @@ from pathlib import Path
 
 import cv2
 import easyocr
+from dotenv import load_dotenv
 from pymongo import MongoClient
+
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 # ─── path al paquete TT_Content_Scraper ───────────────────────────────────────
 _PKG_PATH = Path(__file__).parent
@@ -29,7 +33,9 @@ from TT_Content_Scraper.tt_content_scraper import TT_Content_Scraper  # type: ig
 
 # ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
 
-MONGO_URI    = "mongodb+srv://isra_db_user:Energiaoscura12w@bronze.blfvi5w.mongodb.net/?appName=Bronze"
+MONGO_URI = os.getenv("MONGODB_URI")
+if not MONGO_URI:
+    sys.exit("ERROR: La variable de entorno MONGODB_URI no está configurada. Revisa tu archivo .env")
 DB_SILVER    = "silver"
 DB_GOLD      = "golden"
 COL_VIDEOS   = "tiktok_videos_ORC"

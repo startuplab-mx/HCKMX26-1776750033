@@ -13,19 +13,24 @@ Uso:
 
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
+from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import BulkWriteError
 from TT_Content_Scraper import TT_Content_Scraper
 
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN  (cambia lo que necesites)
 # ─────────────────────────────────────────────
 
-MONGO_URI       = "mongodb+srv://isra_db_user:momisparanoid12w@bronze.blfvi5w.mongodb.net/?appName=Bronze"
+MONGO_URI = os.getenv("MONGODB_URI")
+if not MONGO_URI:
+    sys.exit("ERROR: La variable de entorno MONGODB_URI no está configurada. Revisa tu archivo .env")
 DB_NAME         = "centinela"
 VIDEOS_COL      = "tiktok_videos"        # colección de videos
 USUARIOS_COL    = "tiktok_usuarios"      # colección de usuarios
