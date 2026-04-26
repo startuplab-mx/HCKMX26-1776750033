@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
+os.environ["USE_TF"] = "0"
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
 from transformers import pipeline
@@ -33,8 +34,8 @@ silver_col = client["silver"]["telegram_messages"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este mensaje de Telegram es sobre {}."
-UMBRAL          = 0.40
-BATCH_SIZE      = 5
+UMBRAL          = 0.49
+BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
 MIN_TEXTO_CHARS = 10
 WRITE_BATCH     = 200
