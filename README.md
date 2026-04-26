@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=240&section=header&text=404%20%7C%20Plataforma%20Centinela&fontSize=46&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Pipeline%20Multiagente%20de%20Monitoreo%20y%20Deteccion%20de%20Riesgo%20en%20Redes%20Sociales&descAlignY=58&descSize=15" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=240&section=header&text=404%20%7C%20Chimalli&fontSize=46&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Pipeline%20Multiagente%20de%20Monitoreo%20y%20Deteccion%20de%20Riesgo%20en%20Redes%20Sociales&descAlignY=58&descSize=15" width="100%"/>
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=2800&pause=900&color=1F8BFF&center=true&vCenter=true&random=false&width=980&lines=Extraccion+continua+de+YouTube%2C+Telegram+y+TikTok;Orquestacion+autonoma+con+LLM+y+agentes+especializados;Clasificacion+NLP+zero-shot+multilingue+con+mDeBERTa;Pipeline+Bronze+to+Silver+para+analitica+y+visualizacion)](https://git.io/typing-svg)
 
@@ -19,7 +19,7 @@
 
 ## Descripcion
 
-**404 - Plataforma Centinela Multiagente** es un sistema de mineria operativa para detectar contenido de riesgo en redes sociales. Implementa un pipeline de agentes que extrae datos de YouTube, Telegram y TikTok, los centraliza en MongoDB (capa Bronze), clasifica contenido sospechoso con NLP zero-shot y promueve resultados a una capa Silver para analitica y validacion humana.
+**404 - Chimalli** es un sistema de mineria operativa para detectar contenido de riesgo en redes sociales. Implementa un pipeline de agentes que extrae datos de YouTube, Telegram y TikTok, los centraliza en MongoDB (capa Bronze), clasifica contenido sospechoso con NLP zero-shot y promueve resultados a una capa Silver para analitica y validacion humana.
 
 Un orquestador inteligente decide que agente ejecutar segun el estado del sistema, el volumen pendiente y la actividad reciente.
 
