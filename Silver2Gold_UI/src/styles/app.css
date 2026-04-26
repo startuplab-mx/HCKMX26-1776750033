@@ -19,6 +19,32 @@
   gap: 1rem;
   padding: 0.7rem 0 0.7rem;
   z-index: 50;
+  position: relative;
+}
+
+.app-shell__tagline {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+
+.app-shell__tagline-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--navy);
+  line-height: 1;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--blue);
 }
 
 .app-shell__brand {
@@ -46,13 +72,6 @@
   margin: 0 0 0.2rem;
 }
 
-.app-shell__subtitle {
-  font-size: 0.7rem;
-  color: var(--gray-600);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1;
-}
 
 .app-shell__session {
   display: flex;

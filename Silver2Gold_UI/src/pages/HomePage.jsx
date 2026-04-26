@@ -14,8 +14,8 @@ const RISK_LABELS = [
 const DEMO_TIKTOK_VIDEOS = [
   {
     _id: 'demo-2',
-    autor_username: 'isabelmorales3306',
-    url: 'https://www.tiktok.com/@isabelmorales3306/video/7630267537321708820',
+    autor_username: 'user258610266karla',
+    url: 'https://www.tiktok.com/@user258610266karla/photo/7625074518289059090',
     descripcion: '',
   },
   {
@@ -62,7 +62,7 @@ function HomePage({ currentUser = 'Analista' }) {
   const [activePlatform, setActivePlatform]       = useState('tiktok')
   const [tiktokType, setTiktokType]               = useState(TIKTOK_TYPES.VIDEOS)
   const [telegramType, setTelegramType]           = useState(TELEGRAM_TYPES.MESSAGES)
-  const [items, setItems]                         = useState([])
+  const [items, setItems]                         = useState(DEMO_TIKTOK_VIDEOS)
   const [previewError, setPreviewError]           = useState('')
   const [previewLoading, setPreviewLoading]       = useState(false)
   const [loadingMore, setLoadingMore]             = useState(false)
@@ -252,7 +252,10 @@ function HomePage({ currentUser = 'Analista' }) {
   }, [selectedDatabase])
 
   useEffect(() => {
-    if (!selectedDatabase || !selectedCollection) { setItems([]); return }
+    if (!selectedDatabase || !selectedCollection) {
+      setItems(activePlatform === 'tiktok' && tiktokType === TIKTOK_TYPES.VIDEOS ? DEMO_TIKTOK_VIDEOS : [])
+      return
+    }
     const savedIndex = reviewPositionByKeyRef.current[reviewSessionKey] ?? 0
     setCurrentIndex(savedIndex)
     setSelectedLabels([])
@@ -260,7 +263,7 @@ function HomePage({ currentUser = 'Analista' }) {
     setHasMore(true)
     setTotalMatches(0)
     loadBatch(0, true)
-  }, [selectedDatabase, selectedCollection, appliedFilter, reviewSessionKey])
+  }, [selectedDatabase, selectedCollection, appliedFilter, reviewSessionKey, activePlatform, tiktokType])
 
   useEffect(() => {
     setSelectedLabels([])
@@ -289,7 +292,12 @@ function HomePage({ currentUser = 'Analista' }) {
       const payload = await res.json()
       if (!res.ok || !payload.ok) { if (replace) setItems([]); setPreviewError(payload.message || 'Error al cargar'); return }
       const docs = payload.documents || []
-      setItems((cur) => replace ? docs : [...cur, ...docs])
+      const isTiktokVideos = activePlatform === 'tiktok' && tiktokType === TIKTOK_TYPES.VIDEOS
+      const demoUrls = new Set(DEMO_TIKTOK_VIDEOS.map((d) => d.url))
+      const finalDocs = replace && isTiktokVideos && skip === 0
+        ? [...DEMO_TIKTOK_VIDEOS, ...docs.filter((d) => !demoUrls.has(d.url))]
+        : docs
+      setItems((cur) => replace ? finalDocs : [...cur, ...docs])
       setTotalMatches(Number.isInteger(payload.total) ? payload.total : docs.length)
       setHasMore(Boolean(payload.hasMore))
       setNextSkip(Number.isInteger(payload.nextSkip) ? payload.nextSkip : skip + docs.length)
@@ -559,7 +567,7 @@ function HomePage({ currentUser = 'Analista' }) {
 
                 {/* Embed TikTok si hay video ID en la URL */}
                 {activePlatform === 'tiktok' && (() => {
-                  const videoId = currentItem.url?.match(/\/video\/(\d+)/)?.[1]
+                  const videoId = currentItem.url?.match(/\/(?:video|photo)\/(\d+)/)?.[1]
                   if (!videoId) return <p className="review-card__text">{currentItem.text}</p>
                   return (
                     <div className="platform-embed">

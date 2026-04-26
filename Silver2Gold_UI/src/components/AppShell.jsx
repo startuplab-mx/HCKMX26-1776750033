@@ -8,10 +8,11 @@ function AppShell({ children, currentUser = 'Asharet' }) {
             src="/favicon.svg"
             alt="Logo del proyecto"
           />
-          <div className="app-shell__brand-copy">
-            <h1>Chimalli</h1>
-            <span className="app-shell__subtitle">Monitor de riesgo en redes sociales</span>
-          </div>
+          <h1>Chimalli</h1>
+        </div>
+
+        <div className="app-shell__tagline">
+          <p className="app-shell__tagline-title">Moderación humana de contenido en riesgo</p>
         </div>
 
         <div className="app-shell__session" aria-label="Usuario conectado">
