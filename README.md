@@ -17,53 +17,36 @@
 
 ---
 
-## 1. Nombre del proyecto y descripcion
+## Descripcion
 
-# 404 - Plataforma Centinela Multiagente
+**404 - Plataforma Centinela Multiagente** es un sistema de mineria operativa para detectar contenido de riesgo en redes sociales. Implementa un pipeline de agentes que extrae datos de YouTube, Telegram y TikTok, los centraliza en MongoDB (capa Bronze), clasifica contenido sospechoso con NLP zero-shot y promueve resultados a una capa Silver para analitica y validacion humana.
 
-404 es una plataforma de mineria operativa para detectar contenido de riesgo en redes sociales a partir de un pipeline de agentes que:
-
-- extrae datos desde YouTube, Telegram y TikTok,
-- centraliza la ingesta en MongoDB (capa Bronze),
-- clasifica contenido sospechoso con NLP zero-shot,
-- promueve resultados a una capa Silver para analitica y visualizacion.
-
-El sistema integra un orquestador inteligente que decide que agente ejecutar segun estado del sistema, volumen pendiente y actividad reciente.
+Un orquestador inteligente decide que agente ejecutar segun el estado del sistema, el volumen pendiente y la actividad reciente.
 
 ---
 
-## DEMO
+## Demo
 
-Link de DEMO:
-
-```md
-## DEMO
-
-[Ver demo en video](AQUI_PEGA_TU_LINK_DE_VIDEO)
-```
+> [Ver demo en video](AQUI_PEGA_TU_LINK_DE_VIDEO)
 
 ---
 
-## 2. Problema que resuelve
+## Problema que resuelve
 
-El problema principal es la falta de un flujo unificado, auditable y automatizable para vigilancia de contenido potencialmente peligroso en redes de alta dinamica.
+La falta de un flujo unificado, auditable y automatizable para vigilar contenido potencialmente peligroso en redes de alta dinamica genera puntos ciegos operativos y tiempos de reaccion elevados.
 
-La carpeta 404 resuelve ese problema con:
+**404 resuelve esto con:**
 
-- una extraccion multifuente y repetible,
-- un motor de priorizacion y clasificacion automatica,
-- una arquitectura por capas (Bronze/Silver) que separa dato crudo de dato analizado,
-- interfaces para observabilidad y consumo de resultados.
+- Extraccion multifuente y repetible desde tres plataformas
+- Motor de priorizacion y clasificacion automatica
+- Arquitectura por capas (Bronze / Silver) que separa dato crudo de dato analizado
+- Interfaces para observabilidad y consumo de resultados
 
-Impacto operativo esperado:
-
-- menor tiempo de reaccion ante picos de actividad,
-- mayor cobertura de fuentes en ventanas cortas,
-- trazabilidad de decisiones del sistema y de cada corrida de agentes.
+**Impacto esperado:** menor tiempo de reaccion ante picos de actividad, mayor cobertura de fuentes en ventanas cortas y trazabilidad completa de decisiones del sistema.
 
 ---
 
-## 3. Arquitectura de alto nivel
+## Arquitectura
 
 ```mermaid
 flowchart LR
@@ -87,75 +70,36 @@ flowchart LR
 
 ---
 
-## 4. Estructura funcional de la carpeta 404
+## Estructura del proyecto
 
 ```text
 404/
-|- Agentes/
-|  |- agente1/                  # ETL wrapper
-|  |- agente2/                  # NLP wrapper + subagentes por fuente
-|  |- orquestador_agentes/      # Decision autonoma con GPT-4o-mini
-|- Apis2BD_ETL/                 # ETL por plataforma (YouTube, Telegram, TikTok)
-|- Reporte_Golden_and_Honeypot/ # Dashboard de monitoreo (TS/React/Express)
-|- Silver2Gold_UI/              # UI alternativa (React + Express)
-|- Bot pescador/                # Scripts de pesca (reservado)
-|- demo_reset.py                # Reinicio de demo en Bronze/Silver
-|- requirements.txt             # Dependencias base Python
+├── Agentes/
+│   ├── agente1/                  # ETL wrapper
+│   ├── agente2/                  # NLP wrapper + subagentes por fuente
+│   └── orquestador_agentes/      # Decision autonoma con GPT-4o-mini
+├── Apis2BD_ETL/                  # ETL por plataforma (YouTube, Telegram, TikTok)
+├── Reporte_Golden_and_Honeypot/  # Dashboard de monitoreo (TS/React/Express)
+├── Silver2Gold_UI/               # UI de validacion humana (React + Express)
+├── Bot pescador/                 # Scripts de pesca (reservado)
+├── demo_reset.py                 # Reinicio de demo en Bronze/Silver
+└── requirements.txt              # Dependencias Python
 ```
 
 ---
 
-## 5. Tecnologias y herramientas utilizadas
+## Tecnologias
 
-### Backend y pipeline
-
-- Python 3.12+
-- MongoDB (colecciones Bronze y Silver)
-- PyMongo
-- python-dotenv
-- tqdm
-
-### Extraccion por fuente
-
-- YouTube Data API v3 (google-api-python-client)
-- Telegram API via Telethon
-- TikTok Content Scraper (pipeline local en ETL_tiktok)
-
-### IA y NLP
-
-- OpenAI API (modelo GPT-4o-mini para orquestacion)
-- Hugging Face Transformers
-- Modelo zero-shot: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli
-- PyTorch (CPU/GPU segun disponibilidad)
-
-### Frontend y visualizacion
-
-- React
-- Vite
-- Express
-- Mongoose
+| Capa | Herramientas |
+|---|---|
+| Pipeline / Backend | Python 3.12+, MongoDB, PyMongo, python-dotenv, tqdm |
+| Extraccion | YouTube Data API v3, Telegram via Telethon, TikTok Scraper |
+| Modelos | OpenAI GPT-4o-mini, mDeBERTa-v3-base-mnli-xnli (zero-shot), PyTorch |
+| Frontend | React, Vite, Express, Mongoose |
 
 ---
 
-## 6. Documentacion explicita de herramientas de IA (actualizadas)
-
-Esta seccion documenta las herramientas de IA efectivamente integradas en el codigo de 404, su uso y el nivel de dependencia operativa.
-
-| Herramienta IA | Modelo / Servicio | Para que se usa | Nivel de uso | Estado de actualizacion | Evidencia en codigo |
-|---|---|---|---|---|---|
-| OpenAI API | GPT-4o-mini | Razonamiento del orquestador: decide correr ETL, NLP, ambos o esperar; construye reporte operativo | Critico | Vigente en codigo (revision: 2026-04) | Agentes/orquestador_agentes/orquestador.py |
-| Hugging Face Transformers | pipeline zero-shot-classification | Motor de inferencia NLP para clasificar riesgo en textos de YouTube, Telegram y TikTok | Critico | Vigente en codigo (revision: 2026-04) | Agentes/agente2/run_agente2.py |
-| mDeBERTa multilingue | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Modelo semantico principal para etiquetar sospecha sobre contenido multilingue | Critico | Vigente en codigo (revision: 2026-04) | Agentes/agente2/run_agente2.py |
-| PyTorch | device cpu/cuda | Ejecucion del modelo NLP y seleccion de dispositivo para rendimiento | Alto | Vigente en codigo (revision: 2026-04) | Agentes/agente2/run_agente2.py |
-
-### Escala de nivel de uso aplicada
-
-- Critico: sin esta IA no existe la funcionalidad principal del modulo.
-- Alto: mejora rendimiento o capacidad clave, aunque no define la logica de negocio por si sola.
-- Medio: apoyo analitico secundario.
-- Bajo: apoyo auxiliar.
-
-### Cobertura de agentes
+## Modulos con IA integrada
 
 | Modulo | Tecnologia principal |
 |---|---|
@@ -163,20 +107,32 @@ Esta seccion documenta las herramientas de IA efectivamente integradas en el cod
 | Agente 2 NLP | Clasificacion semantica zero-shot con mDeBERTa multilingue |
 | ETL (Agente 1 y Apis2BD_ETL) | Extraccion directa via APIs publicas + scoring por lexico de riesgo |
 
+<details>
+<summary>Ver detalle de herramientas IA integradas</summary>
+
+| Herramienta | Modelo | Uso | Modulo |
+|---|---|---|---|
+| OpenAI API | GPT-4o-mini | Razonamiento del orquestador: decide correr ETL, NLP, ambos o esperar | orquestador_agentes/orquestador.py |
+| Hugging Face | zero-shot-classification | Motor de inferencia NLP para clasificar riesgo en textos | agente2/run_agente2.py |
+| mDeBERTa | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Clasificacion semantica multilingue de contenido sospechoso | agente2/run_agente2.py |
+| PyTorch | cpu / cuda | Ejecucion del modelo NLP con seleccion automatica de dispositivo | agente2/run_agente2.py |
+
+</details>
+
 ---
 
-## 7. Instrucciones para ejecutar el prototipo
+## Instalacion y ejecucion
 
-## 7.1 Prerrequisitos
+### Prerrequisitos
 
-- Python 3.12 o superior
-- Node.js 18 o superior
+- Python 3.12+
+- Node.js 18+
 - MongoDB Atlas o local
-- Credenciales API segun fuente (YouTube y Telegram)
+- Credenciales API: YouTube, Telegram y OpenAI
 
-## 7.2 Configuracion de entorno
+### Variables de entorno
 
-En la raiz de 404, crear archivo .env con al menos:
+Crear `.env` en la raiz de `404/`:
 
 ```env
 MONGODB_URI=mongodb+srv://usuario:password@cluster/base?retryWrites=true&w=majority
@@ -186,53 +142,39 @@ TELEGRAM_API_ID=tu_telegram_api_id
 TELEGRAM_API_HASH=tu_telegram_api_hash
 ```
 
-## 7.3 Instalacion Python (pipeline)
-
-Desde 404:
+### Dependencias Python
 
 ```bash
 pip install -r requirements.txt
 pip install pymongo python-dotenv openai transformers torch telethon google-api-python-client tqdm
 ```
 
-Para flujo TikTok (si se activa):
+Para el flujo TikTok:
 
 ```bash
-pip install playwright
-playwright install chromium
+pip install playwright && playwright install chromium
 ```
 
-## 7.4 Ejecutar componentes principales
-
-### Opcion A: orquestador con GUI (recomendado)
+### Opciones de ejecucion
 
 ```bash
+# Opcion A — Orquestador completo (recomendado)
 python Agentes/orquestador_agentes/orquestador.py
-```
 
-### Opcion B: ETL directo por fuentes
-
-```bash
+# Opcion B — ETL directo por fuente
 python Apis2BD_ETL/main.py
 python Apis2BD_ETL/main.py youtube
 python Apis2BD_ETL/main.py telegram
-```
 
-### Opcion C: NLP directo sobre Bronze
-
-```bash
+# Opcion C — NLP directo sobre Bronze
 python Agentes/agente2/run_agente2.py todos
 python Agentes/agente2/run_agente2.py youtube
-python Agentes/agente2/run_agente2.py telegram
-```
 
-### Opcion D: reset rapido para demo controlada
-
-```bash
+# Opcion D — Reset rapido para demo
 python demo_reset.py
 ```
 
-## 7.5 Ejecutar interfaz web (Silver2Gold_UI)
+### Interfaz web (Silver2Gold_UI)
 
 ```bash
 cd Silver2Gold_UI
@@ -240,25 +182,35 @@ npm install
 npm run start
 ```
 
-Esto levanta backend (Express) y frontend (Vite) en paralelo segun scripts del proyecto.
+Levanta el backend (Express, puerto 5000) y el frontend (Vite, puerto 5173) en paralelo.
 
 ---
 
-## 8. Estado y notas operativas
+## Estado operativo
 
-- El orquestador esta preparado para ciclos autonomos con reporte en base de conocimiento.
-- El ETL de TikTok puede requerir ajustes de scraping segun cambios de plataforma.
-- En reglas internas del orquestador se contempla TikTok ETL deshabilitado temporalmente para ejecucion automatica.
-
----
-
-## 9. Uso de herramientas de IA en el desarrollo
-
-Durante el desarrollo del proyecto se utilizaron **ChatGPT** y **Gemini** como asistentes de programación para acelerar la escritura y depuración de código. La arquitectura del sistema, las decisiones técnicas, la integración de fuentes y la lógica de negocio son trabajo propio del equipo.
+- El orquestador soporta ciclos autonomos con reporte en base de conocimiento.
+- El ETL de TikTok puede requerir ajustes de scraping ante cambios de plataforma.
+- TikTok ETL esta deshabilitado temporalmente en ejecucion automatica del orquestador.
 
 ---
 
-## 10. Integrantes del equipo
+## Documentacion por modulo
+
+| Modulo | Enlace |
+|---|---|
+| Agentes (ETL, NLP, Orquestador) | [Agentes/README.md](Agentes/README.md) |
+| Dashboard de monitoreo (KPIs) | [Reporte_Golden_and_Honeypot/README.md](Reporte_Golden_and_Honeypot/README.md) |
+| UI de etiquetado Silver → Golden | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
+
+---
+
+## Uso de IA en el desarrollo
+
+Durante el desarrollo se utilizaron **ChatGPT** y **Gemini** como asistentes de programacion para acelerar la escritura y depuracion de codigo. La arquitectura, las decisiones tecnicas, la integracion de fuentes y la logica de negocio son trabajo propio del equipo.
+
+---
+
+## Equipo
 
 <table>
     <tr>
@@ -285,20 +237,8 @@ Durante el desarrollo del proyecto se utilizaron **ChatGPT** y **Gemini** como a
     </tr>
 </table>
 
----
-
-## 11. Documentación por módulo
-
-| Módulo | README |
-|---|---|
-| Agentes (ETL, NLP, Orquestador) | [Agentes/README.md](Agentes/README.md) |
-| Dashboard de monitoreo (KPIs) | [Reporte_Golden_and_Honeypot/README.md](Reporte_Golden_and_Honeypot/README.md) · [SETUP.md](Reporte_Golden_and_Honeypot/SETUP.md) · [INTEGRACION.md](Reporte_Golden_and_Honeypot/INTEGRACION.md) |
-| UI de etiquetado Silver → Golden | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
-
 <div align="center">
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=120&section=footer" width="100%"/>
 
 </div>
-
-
