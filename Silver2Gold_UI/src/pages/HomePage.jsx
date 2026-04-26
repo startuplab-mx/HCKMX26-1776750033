@@ -13,7 +13,7 @@ const PLATFORM_CONFIG = [
   {
     id: 'youtube',
     label: 'YouTube',
-    collection: 'youtube_items',
+    collectionCandidates: ['youtube_items'],
     description: 'Videos y metadatos disponibles para análisis.',
     filters: [
       { value: 'channel_id', label: 'Channel ID' },
@@ -26,7 +26,10 @@ const PLATFORM_CONFIG = [
   {
     id: 'telegram',
     label: 'Telegram',
-    collection: 'telegram_messages',
+    collectionCandidates: [
+      'telegram_messages',
+      'telegram_channels', // antes usado en Silver
+    ],
     description: 'Mensajes y actividad de canales monitoreados.',
     filters: [
       { value: 'channel_name', label: 'Canal / Grupo' },
@@ -38,7 +41,12 @@ const PLATFORM_CONFIG = [
   {
     id: 'tiktok',
     label: 'TikTok',
-    collection: 'tiktok_videos',
+    collectionCandidates: [
+      'tiktok_videos',
+      'tiktok_usuarios',
+      // rollback opcional: 'tiktok_videos_ORC',
+      // rollback opcional: 'tiktok_usuarios_ORC',
+    ],
     description: 'Videos y metadatos disponibles para análisis.',
     filters: [
       { value: 'author', label: 'Autor' },
@@ -49,6 +57,15 @@ const PLATFORM_CONFIG = [
     ],
   },
 ]
+
+function getAvailableCollectionForPlatform(platform, database) {
+  if (!database) {
+    return ''
+  }
+
+  const candidates = platform.collectionCandidates || []
+  return candidates.find((collectionName) => database.collections.includes(collectionName)) || ''
+}
 
 function HomePage({ currentUser = 'Asharet' }) {
   const [catalog, setCatalog] = useState([])
@@ -81,7 +98,9 @@ function HomePage({ currentUser = 'Asharet' }) {
     }
 
     return (
-      catalog.find((database) => database.name.toLowerCase() === 'centinela') ||
+      catalog.find((database) => database.name.toLowerCase().includes('silver')) ||
+      catalog.find((database) => database.name.toLowerCase() === 'silver') ||
+      catalog.find((database) => database.name.toLowerCase() === 'centinela') || // antes: base principal
       catalog[0]
     )
   }, [catalog])
@@ -96,9 +115,7 @@ function HomePage({ currentUser = 'Asharet' }) {
       return ''
     }
 
-    return selectedDatabase.collections.includes(activeConfig.collection)
-      ? activeConfig.collection
-      : ''
+    return getAvailableCollectionForPlatform(activeConfig, selectedDatabase)
   }, [selectedDatabase, activeConfig])
 
   const activeFilters = useMemo(() => activeConfig?.filters || [], [activeConfig])
@@ -110,7 +127,8 @@ function HomePage({ currentUser = 'Asharet' }) {
         count: Number.isFinite(platformCounts[platform.id])
           ? platformCounts[platform.id]
           : 0,
-        available: selectedDatabase?.collections.includes(platform.collection) || false,
+        available:
+          Boolean(getAvailableCollectionForPlatform(platform, selectedDatabase)) || false,
       })),
     [platformCounts, selectedDatabase],
   )
@@ -232,14 +250,17 @@ function HomePage({ currentUser = 'Asharet' }) {
       try {
         const entries = await Promise.all(
           PLATFORM_CONFIG.map(async (platform) => {
-            const available = selectedDatabase.collections.includes(platform.collection)
-            if (!available) {
+            const availableCollection = getAvailableCollectionForPlatform(
+              platform,
+              selectedDatabase,
+            )
+            if (!availableCollection) {
               return [platform.id, 0]
             }
 
             const response = await fetch(
               `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
-                platform.collection,
+                availableCollection,
               )}/preview?skip=0&limit=1`,
             )
             const payload = await response.json()
@@ -527,7 +548,7 @@ function HomePage({ currentUser = 'Asharet' }) {
       <aside className="catalog-sidebar">
         <div className="catalog-sidebar__top">
           <h2>Registros por red social</h2>
-          <p>Distribución actual de registros disponibles en Centinela.</p>
+          <p>Distribución actual de registros disponibles en Silver.</p>
 
           {platformCountsLoading ? (
             <p className="catalog-sidebar__loading">Cargando gráfica...</p>
@@ -574,7 +595,9 @@ function HomePage({ currentUser = 'Asharet' }) {
           <ul className="social-nav">
             {PLATFORM_CONFIG.map((platform) => {
               const isActive = platform.id === activePlatform
-              const available = selectedDatabase?.collections.includes(platform.collection)
+              const available = Boolean(
+                getAvailableCollectionForPlatform(platform, selectedDatabase),
+              )
 
               return (
                 <li key={platform.id}>
@@ -793,7 +816,7 @@ function HomePage({ currentUser = 'Asharet' }) {
                   : normalizedItems.length === 0
                     ? 'No hay documentos para mostrar'
                     : 'No hay más mensajes disponibles por ahora'
-                : 'TikTok estará disponible cuando exista la colección tiktok_items'}
+                : 'TikTok estará disponible cuando exista tiktok_videos o tiktok_usuarios'}
             </div>
           )}
 
