@@ -1,0 +1,168 @@
+"""
+Agente 2 — TikTok Videos  (Bronze → Silver)
+centinela.tiktok_videos → silver.tiktok_videos
+
+Clasifica descripcion + hashtags de cada video en lotes de BATCH_SIZE.
+Pasa a Silver si top_label != Seguro y score >= UMBRAL.
+Silver doc = copia completa del Bronze + campos NLP de enriquecimiento.
+Incremental: omite _id que ya existen en Silver.
+"""
+
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import torch
+os.environ["USE_TF"] = "0"
+from dotenv import load_dotenv
+from pymongo import MongoClient, UpdateOne
+from transformers import pipeline
+
+ROOT = Path(__file__).parent.parent.parent.parent
+load_dotenv(ROOT / ".env")
+
+MONGO_URI = os.getenv("MONGODB_URI")
+if not MONGO_URI:
+    sys.exit("ERROR: MONGODB_URI no definida en .env")
+
+client     = MongoClient(MONGO_URI)
+bronze_col = client["centinela"]["tiktok_videos"]
+silver_col = client["silver"]["tiktok_videos"]
+
+ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
+                   "Contenido Inapropiado para Menores", "Seguro"]
+TEMPLATE        = "Este video de TikTok es sobre {}."
+UMBRAL          = 0.43
+BATCH_SIZE      = 32
+MAX_TEXTO_CHARS = 500
+MIN_TEXTO_CHARS = 5
+WRITE_BATCH     = 100
+
+
+def _nivel(score: float) -> str:
+    if score >= 0.65: return "alto"
+    return "medio"
+
+
+def _texto_video(doc: dict) -> str:
+    desc     = str(doc.get("descripcion", "")).strip()
+    hashtags = " ".join(doc.get("hashtags", []))
+    partes   = [p for p in [desc, hashtags] if p]
+    return " ".join(partes)[:MAX_TEXTO_CHARS]
+
+
+def _clasificar_lote(clf, textos: list[str]) -> list[dict]:
+    res = clf(textos, candidate_labels=ETIQUETAS, hypothesis_template=TEMPLATE)
+    return res if isinstance(res, list) else [res]
+
+
+def _parsear_resultado(res: dict) -> tuple[str, float, dict]:
+    top_label = res["labels"][0]
+    top_score = round(res["scores"][0], 4)
+    scores    = {lbl: round(sc, 4) for lbl, sc in zip(res["labels"], res["scores"])}
+    return top_label, top_score, scores
+
+
+def _es_sospechoso(top_label: str, top_score: float) -> bool:
+    return top_label != "Seguro" and top_score >= UMBRAL
+
+
+def _build_op(doc: dict, texto: str, top_label: str,
+              top_score: float, scores: dict) -> UpdateOne:
+    silver = {k: v for k, v in doc.items() if k != "_id"}
+    silver.update({
+        "_id_bronce":          doc["_id"],
+        "scores_zero_shot":    scores,
+        "categoria_principal": top_label,
+        "nivel_riesgo":        _nivel(top_score),
+        "riesgo_score":        top_score,
+        "texto_analizado":     texto,
+        "fuente":              "tiktok",
+        "coleccion_origen":    "centinela.tiktok_videos",
+        "procesado_en":        datetime.now(timezone.utc)})
+    return UpdateOne({"_id": doc["_id"]}, {"$set": silver}, upsert=True)
+
+
+def _flush(ops: list) -> None:
+    if ops:
+        silver_col.bulk_write(ops, ordered=False)
+        ops.clear()
+
+
+def ejecutar_filtro_tiktok_videos(clf=None):
+    if clf is None:
+        device = 0 if torch.cuda.is_available() else -1
+        print(f"\n  TikTok Videos  ·  cargando modelo NLP  ·  device={'cuda:0' if device == 0 else 'cpu'}")
+        clf = pipeline("zero-shot-classification",
+                       model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+                       device=device)
+
+    ya_en_silver = set(silver_col.distinct("_id"))
+    filtro       = {
+        "$or": [{"descripcion": {"$exists": True, "$nin": ["", None]}},
+                {"hashtags":    {"$exists": True, "$ne": []}}]}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
+    print(f"  TikTok Videos  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
+
+    if total == 0:
+        print("  TikTok Videos  ·  sin registros nuevos")
+        return {"agente": "agente2_tiktok_videos", "sospechosos": 0, "total": 0}
+
+    ops         = []
+    sospechosos = 0
+    buf_docs    = []
+    buf_textos  = []
+
+    def _procesar_buffer():
+        nonlocal sospechosos
+        resultados = _clasificar_lote(clf, buf_textos)
+        for doc, texto, res in zip(buf_docs, buf_textos, resultados):
+            top_label, top_score, scores = _parsear_resultado(res)
+            if not _es_sospechoso(top_label, top_score):
+                continue
+            ops.append(_build_op(doc, texto, top_label, top_score, scores))
+            sospechosos += 1
+            vid = str(doc.get("video_id", doc["_id"]))[:22]
+            print(f"  {vid:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
+
+    for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
+        texto = _texto_video(doc)
+        if len(texto) < MIN_TEXTO_CHARS:
+            continue
+
+        buf_docs.append(doc)
+        buf_textos.append(texto)
+
+        if len(buf_docs) == BATCH_SIZE:
+            try:
+                _procesar_buffer()
+            except Exception as e:
+                print(f"  Error en lote: {e}")
+            finally:
+                buf_docs.clear()
+                buf_textos.clear()
+
+            if len(ops) >= WRITE_BATCH:
+                _flush(ops)
+
+    if buf_docs:
+        try:
+            _procesar_buffer()
+        except Exception as e:
+            print(f"  Error en lote final: {e}")
+        finally:
+            buf_docs.clear()
+            buf_textos.clear()
+
+    _flush(ops)
+
+    tasa = f"{sospechosos/total:.1%}" if total else "—"
+    print(f"\n  TikTok Videos  ·  {sospechosos}/{total} sospechosos  ·  tasa={tasa}")
+    return {"agente": "agente2_tiktok_videos", "sospechosos": sospechosos, "total": total}
+
+
+if __name__ == "__main__":
+    ejecutar_filtro_tiktok_videos()

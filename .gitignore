@@ -5,10 +5,12 @@
 test_data/
 .DS_Store
 *.jpeg
+!assets/**
 *.mp3
 *.mp4
-*.json
 *.txt
+*.xlsx
+exports_golden/
 test_folder/
 **toast.py
 db_connection.py
@@ -17,4 +19,9 @@ data/
 *.pyc
 *.session
 *.session-journal
+README_agentes.md
+*.json
+!json_holdout_prueba.json
+!**/package.json
+
 
