@@ -1,15 +1,14 @@
 """
-Agente 2 — Telegram Messages  (Bronze → Silver)
-centinela.telegram_messages → silver.telegram_messages
+Agente 2 — TikTok Videos  (Bronze → Silver)
+centinela.tiktok_videos → silver.tiktok_videos
 
-Clasifica el texto de cada mensaje en lotes de BATCH_SIZE.
+Clasifica descripcion + hashtags de cada video en lotes de BATCH_SIZE.
 Pasa a Silver si top_label != Seguro y score >= UMBRAL.
 Silver doc = copia completa del Bronze + campos NLP de enriquecimiento.
 Incremental: omite _id que ya existen en Silver.
 """
 
 import os
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,22 +27,17 @@ if not MONGO_URI:
     sys.exit("ERROR: MONGODB_URI no definida en .env")
 
 client     = MongoClient(MONGO_URI)
-bronze_col = client["centinela"]["telegram_messages"]
-silver_col = client["silver"]["telegram_messages"]
+bronze_col = client["centinela"]["tiktok_videos"]
+silver_col = client["silver"]["tiktok_videos"]
 
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
-TEMPLATE        = "Este mensaje de Telegram es sobre {}."
-UMBRAL          = 0.49
+TEMPLATE        = "Este video de TikTok es sobre {}."
+UMBRAL          = 0.50
 BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
-MIN_TEXTO_CHARS = 10
-WRITE_BATCH     = 200
-
-_RE_TELEFONO = re.compile(r"\+?\d[\d\s\-]{8,}\d")
-_RE_URL      = re.compile(r"https?://|www\.|t\.me/|\.com|\.mx|\.io", re.I)
-_RE_INVITE   = re.compile(r"t\.me/\+|t\.me/joinchat", re.I)
-
+MIN_TEXTO_CHARS = 5
+WRITE_BATCH     = 100
 
 
 def _nivel(score: float) -> str:
@@ -51,13 +45,11 @@ def _nivel(score: float) -> str:
     return "medio"
 
 
-def _signals(texto: str) -> dict:
-    return {
-        "contiene_url":        bool(_RE_URL.search(texto)),
-        "contiene_telefono":   bool(_RE_TELEFONO.search(texto)),
-        "contiene_invitacion": bool(_RE_INVITE.search(texto)),
-        "longitud_mensaje":    len(texto),
-    }
+def _texto_video(doc: dict) -> str:
+    desc     = str(doc.get("descripcion", "")).strip()
+    hashtags = " ".join(doc.get("hashtags", []))
+    partes   = [p for p in [desc, hashtags] if p]
+    return " ".join(partes)[:MAX_TEXTO_CHARS]
 
 
 def _clasificar_lote(clf, textos: list[str]) -> list[dict]:
@@ -86,11 +78,9 @@ def _build_op(doc: dict, texto: str, top_label: str,
         "nivel_riesgo":        _nivel(top_score),
         "riesgo_score":        top_score,
         "texto_analizado":     texto,
-        **_signals(texto),
-        "fuente":              "telegram",
-        "coleccion_origen":    "centinela.telegram_messages",
-        "procesado_en":        datetime.now(timezone.utc),
-    })
+        "fuente":              "tiktok",
+        "coleccion_origen":    "centinela.tiktok_videos",
+        "procesado_en":        datetime.now(timezone.utc)})
     return UpdateOne({"_id": doc["_id"]}, {"$set": silver}, upsert=True)
 
 
@@ -100,24 +90,25 @@ def _flush(ops: list) -> None:
         ops.clear()
 
 
-
-def ejecutar_filtro_telegram_messages(clf=None):
+def ejecutar_filtro_tiktok_videos(clf=None):
     if clf is None:
         device = 0 if torch.cuda.is_available() else -1
-        print(f"\n  Telegram Messages  ·  cargando modelo NLP  ·  device={'cuda:0' if device == 0 else 'cpu'}")
+        print(f"\n  TikTok Videos  ·  cargando modelo NLP  ·  device={'cuda:0' if device == 0 else 'cpu'}")
         clf = pipeline("zero-shot-classification",
                        model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {"message_text": {"$exists": True, "$nin": ["", None]},
-              "_id":          {"$nin": list(ya_en_silver)}}
+    filtro = {
+        "$or": [{"descripcion": {"$exists": True, "$nin": ["", None]}},
+                {"hashtags":    {"$exists": True, "$ne": []}}],
+        "_id": {"$nin": list(ya_en_silver)}}
     total = bronze_col.count_documents(filtro)
-    print(f"  Telegram Messages  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
+    print(f"  TikTok Videos  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
-        print("  Telegram Messages  ·  sin registros nuevos")
-        return {"agente": "agente2_telegram_messages", "sospechosos": 0, "total": 0}
+        print("  TikTok Videos  ·  sin registros nuevos")
+        return {"agente": "agente2_tiktok_videos", "sospechosos": 0, "total": 0}
 
     ops         = []
     sospechosos = 0
@@ -133,11 +124,11 @@ def ejecutar_filtro_telegram_messages(clf=None):
                 continue
             ops.append(_build_op(doc, texto, top_label, top_score, scores))
             sospechosos += 1
-            msg_id = str(doc.get("message_id", doc["_id"]))[:22]
-            print(f"  {msg_id:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
+            vid = str(doc.get("video_id", doc["_id"]))[:22]
+            print(f"  {vid:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
-        texto = str(doc.get("message_text", "")).strip()[:MAX_TEXTO_CHARS]
+        texto = _texto_video(doc)
         if len(texto) < MIN_TEXTO_CHARS:
             continue
 
@@ -148,7 +139,7 @@ def ejecutar_filtro_telegram_messages(clf=None):
             try:
                 _procesar_buffer()
             except Exception as e:
-                print(f"  ⚠️  Error en lote: {e}")
+                print(f"  Error en lote: {e}")
             finally:
                 buf_docs.clear()
                 buf_textos.clear()
@@ -156,12 +147,11 @@ def ejecutar_filtro_telegram_messages(clf=None):
             if len(ops) >= WRITE_BATCH:
                 _flush(ops)
 
-    # Lote restante
     if buf_docs:
         try:
             _procesar_buffer()
         except Exception as e:
-            print(f"  ⚠️  Error en lote final: {e}")
+            print(f"  Error en lote final: {e}")
         finally:
             buf_docs.clear()
             buf_textos.clear()
@@ -169,9 +159,9 @@ def ejecutar_filtro_telegram_messages(clf=None):
     _flush(ops)
 
     tasa = f"{sospechosos/total:.1%}" if total else "—"
-    print(f"\n  Telegram Messages  ·  {sospechosos}/{total} sospechosos  ·  tasa={tasa}")
-    return {"agente": "agente2_telegram_messages", "sospechosos": sospechosos, "total": total}
+    print(f"\n  TikTok Videos  ·  {sospechosos}/{total} sospechosos  ·  tasa={tasa}")
+    return {"agente": "agente2_tiktok_videos", "sospechosos": sospechosos, "total": total}
 
 
 if __name__ == "__main__":
-    ejecutar_filtro_telegram_messages()
+    ejecutar_filtro_tiktok_videos()

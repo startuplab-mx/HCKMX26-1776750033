@@ -1,35 +1,57 @@
 """
 Agente 2 — Wrapper principal
 Expone run_classification(plataforma) para ser invocado por el orquestador.
-Coordina los 4 sub-agentes NLP según la plataforma solicitada.
-Los sub-agentes se ejecutan en paralelo con ThreadPoolExecutor para solapar
-I/O de MongoDB y preprocesamiento CPU mientras la GPU procesa lotes.
+Carga el modelo NLP una sola vez y lo comparte entre los 5 sub-agentes,
+que se ejecutan en paralelo con ThreadPoolExecutor para solapar I/O de
+MongoDB y preprocesamiento CPU mientras la GPU atiende los lotes.
 """
 
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+import torch
+import os
+os.environ["USE_TF"] = "0"
+from transformers import pipeline
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(Path(__file__).parent / "agente2_youtube"))
 sys.path.insert(0, str(Path(__file__).parent / "agente2_telegram_channels"))
 sys.path.insert(0, str(Path(__file__).parent / "agente2_telegram_messages"))
 sys.path.insert(0, str(Path(__file__).parent / "agente2_tiktok_users"))
+sys.path.insert(0, str(Path(__file__).parent / "agente2_tiktok_videos"))
 
 from code_agente2_youtube            import ejecutar_filtro_youtube
 from code_agente2_telegram_channels  import ejecutar_filtro_telegram_channels
 from code_agente2_telegram_messages  import ejecutar_filtro_telegram_messages
 from code_agente2_tiktok_users       import ejecutar_filtro_tiktok_users
+from code_agente2_tiktok_videos      import ejecutar_filtro_tiktok_videos
+
+
+class _SafeCLF:
+    """Wrapper thread-safe sobre HuggingFace pipeline de zero-shot classification.
+    Un único modelo en GPU compartido entre threads; el Lock serializa la inferencia
+    mientras el I/O de MongoDB y el preprocesamiento CPU corren en paralelo."""
+    def __init__(self, *args, **kwargs):
+        self._clf  = pipeline(*args, **kwargs)
+        self._lock = threading.Lock()
+
+    def __call__(self, *args, **kwargs):
+        with self._lock:
+            return self._clf(*args, **kwargs)
+
 
 MAPA = {
     "youtube":  [ejecutar_filtro_youtube],
     "telegram": [ejecutar_filtro_telegram_channels, ejecutar_filtro_telegram_messages],
-    "tiktok":   [ejecutar_filtro_tiktok_users],
+    "tiktok":   [ejecutar_filtro_tiktok_users, ejecutar_filtro_tiktok_videos],
     "todos":    [ejecutar_filtro_youtube,
                  ejecutar_filtro_telegram_channels,
                  ejecutar_filtro_telegram_messages,
-                 ejecutar_filtro_tiktok_users],
-}
+                 ejecutar_filtro_tiktok_users,
+                 ejecutar_filtro_tiktok_videos]}
 
 
 def run_classification(plataforma: str = "todos") -> dict:
@@ -39,15 +61,19 @@ def run_classification(plataforma: str = "todos") -> dict:
 
     print(f"\n  ── NLP · {plataforma.upper()} ────────────────────────────────────")
 
-    resultados   = []
-    total_sosp   = 0
-    total_docs   = 0
-    errores      = []
+    device = 0 if torch.cuda.is_available() else -1
+    print(f"  Cargando modelo NLP compartido  ·  device={'cuda:0' if device == 0 else 'cpu'}")
+    clf = _SafeCLF("zero-shot-classification",
+                   model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+                   device=device)
 
-    # Ejecutar en paralelo: PyTorch libera el GIL en CUDA, los threads solapan
-    # I/O MongoDB + preprocesamiento CPU con la cola de inferencia en GPU.
+    resultados = []
+    total_sosp = 0
+    total_docs = 0
+    errores    = []
+
     with ThreadPoolExecutor(max_workers=len(funciones)) as pool:
-        futuros = {pool.submit(fn): fn for fn in funciones}
+        futuros = {pool.submit(fn, clf): fn for fn in funciones}
         for futuro in as_completed(futuros):
             fn = futuros[futuro]
             try:
@@ -67,8 +93,7 @@ def run_classification(plataforma: str = "todos") -> dict:
         "total_sospechosos":     total_sosp,
         "tasa_sospecha":         round(total_sosp / total_docs, 4) if total_docs else 0,
         "errores":               errores,
-        "status":                "completado" if not errores else "completado_con_errores",
-    }
+        "status":                "completado" if not errores else "completado_con_errores"}
 
     tasa = f"{reporte['tasa_sospecha']:.1%}" if total_docs else "—"
     print(f"\n  NLP finalizado  ·  {total_sosp}/{total_docs} sospechosos → Silver  ·  tasa={tasa}\n")

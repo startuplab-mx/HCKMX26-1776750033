@@ -101,12 +101,13 @@ def _flush(ops: list) -> None:
 
 
 
-def ejecutar_filtro_tiktok_users():
-    device = 0 if torch.cuda.is_available() else -1
-    print(f"\n  TikTok Users  ·  cargando modelo NLP  ·  device={'cuda:0' if device == 0 else 'cpu'}")
-    clf = pipeline("zero-shot-classification",
-                   model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
-                   device=device)
+def ejecutar_filtro_tiktok_users(clf=None):
+    if clf is None:
+        device = 0 if torch.cuda.is_available() else -1
+        print(f"\n  TikTok Users  ·  cargando modelo NLP  ·  device={'cuda:0' if device == 0 else 'cpu'}")
+        clf = pipeline("zero-shot-classification",
+                       model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+                       device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
     filtro = {
