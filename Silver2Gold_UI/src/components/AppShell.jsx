@@ -5,7 +5,7 @@ function AppShell({ children, currentUser = 'Asharet' }) {
         <div className="app-shell__brand">
           <img
             className="app-shell__logo"
-            src="/logo.jpeg"
+            src="/favicon.svg"
             alt="Logo del proyecto"
           />
           <div className="app-shell__brand-copy">

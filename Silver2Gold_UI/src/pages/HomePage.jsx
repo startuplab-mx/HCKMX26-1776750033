@@ -1,298 +1,191 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BATCH_SIZE = 5
-const TIKTOK_CONTENT_TYPES = {
-  VIDEOS: 'videos',
-  USERS: 'usuarios',
-}
 
-const LABEL_OPTIONS = [
-  { value: 'seguro', label: 'Seguro', tone: 'safe' },
-  { value: 'narcocultura', label: 'Narcocultura', tone: 'risk' },
-  { value: 'oferta de riesgo', label: 'Oferta de riesgo', tone: 'risk' },
-  { value: 'reclutamiento', label: 'Reclutamiento', tone: 'risk' },
+const TIKTOK_TYPES = { VIDEOS: 'videos', USERS: 'usuarios' }
+const TELEGRAM_TYPES = { MESSAGES: 'messages', CHANNELS: 'channels' }
+
+const RISK_LABELS = [
+  { value: 'narcocultura',     label: 'Narcocultura' },
+  { value: 'oferta de riesgo', label: 'Oferta de riesgo' },
+  { value: 'reclutamiento',    label: 'Reclutamiento' },
 ]
 
 const PLATFORM_CONFIG = [
   {
     id: 'youtube',
     label: 'YouTube',
+    icon: '▶',
     collectionCandidates: ['youtube_items'],
-    description: 'Videos y metadatos disponibles para análisis.',
-    filters: [
-      { value: 'channel_id', label: 'Channel ID' },
-      { value: 'title', label: 'Título' },
-      { value: 'channel_name', label: 'Canal' },
-      { value: 'description', label: 'Descripción' },
-      { value: 'text', label: 'Texto' },
-    ],
+    description: 'Videos de YouTube con comentarios sospechosos.',
   },
   {
     id: 'telegram',
     label: 'Telegram',
-    collectionCandidates: [
-      'telegram_messages',
-      'telegram_channels', // antes usado en Silver
-    ],
-    description: 'Mensajes y actividad de canales monitoreados.',
-    filters: [
-      { value: 'channel_name', label: 'Canal / Grupo' },
-      { value: 'group_name', label: 'Nombre de grupo' },
-      { value: 'chat_title', label: 'Título del chat' },
-      { value: 'text', label: 'Texto' },
-    ],
+    icon: '✈',
+    collectionCandidates: ['telegram_messages', 'telegram_channels'],
+    description: 'Mensajes y canales monitoreados.',
   },
   {
     id: 'tiktok',
     label: 'TikTok',
-    collectionCandidates: [
-      'tiktok_videos',
-      'tiktok_usuarios',
-      'tiktok_users', // variante alternativa
-      // rollback opcional: 'tiktok_videos_ORC',
-      // rollback opcional: 'tiktok_usuarios_ORC',
-    ],
-    description: 'Videos y metadatos disponibles para análisis.',
-    filters: [
-      { value: 'author', label: 'Autor' },
-      { value: 'channel_name', label: 'Canal' },
-      { value: 'description', label: 'Descripción' },
-      { value: 'caption', label: 'Caption' },
-      { value: 'text', label: 'Texto' },
-    ],
+    icon: '♪',
+    collectionCandidates: ['tiktok_videos', 'tiktok_usuarios', 'tiktok_users'],
+    description: 'Videos y perfiles de TikTok.',
   },
 ]
 
-function getAvailableCollectionForPlatform(platform, database) {
-  if (!database) {
-    return ''
-  }
-
-  const candidates = platform.collectionCandidates || []
-  return candidates.find((collectionName) => database.collections.includes(collectionName)) || ''
+function getCollection(database, candidates) {
+  if (!database) return ''
+  return candidates.find((c) => database.collections.includes(c)) || ''
 }
 
-function getAvailableCollectionByCandidates(database, candidates) {
-  if (!database) {
-    return ''
-  }
-
-  return candidates.find((collectionName) => database.collections.includes(collectionName)) || ''
-}
-
-function getTiktokCollectionByContentType(database, contentType) {
-  if (contentType === TIKTOK_CONTENT_TYPES.USERS) {
-    return getAvailableCollectionByCandidates(database, [
-      'tiktok_usuarios',
-      'tiktok_users',
-      // rollback opcional: 'tiktok_usuarios_ORC',
-    ])
-  }
-
-  return getAvailableCollectionByCandidates(database, [
-    'tiktok_videos',
-    // rollback opcional: 'tiktok_videos_ORC',
-  ])
-}
-
-function HomePage({ currentUser = 'Asharet' }) {
-  const [catalog, setCatalog] = useState([])
-  const [catalogError, setCatalogError] = useState('')
-  const [platformCounts, setPlatformCounts] = useState({})
-  const [platformCountsLoading, setPlatformCountsLoading] = useState(false)
-  const [platformCountsError, setPlatformCountsError] = useState('')
-  const [activePlatform, setActivePlatform] = useState('telegram')
-  const [items, setItems] = useState([])
-  const [previewError, setPreviewError] = useState('')
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [nextSkip, setNextSkip] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [totalMatches, setTotalMatches] = useState(0)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [selectedLabels, setSelectedLabels] = useState([])
+function HomePage({ currentUser = 'Analista' }) {
+  const [catalog, setCatalog]                     = useState([])
+  const [catalogError, setCatalogError]           = useState('')
+  const [platformCounts, setPlatformCounts]       = useState({})
+  const [activePlatform, setActivePlatform]       = useState('telegram')
+  const [tiktokType, setTiktokType]               = useState(TIKTOK_TYPES.VIDEOS)
+  const [telegramType, setTelegramType]           = useState(TELEGRAM_TYPES.MESSAGES)
+  const [items, setItems]                         = useState([])
+  const [previewError, setPreviewError]           = useState('')
+  const [previewLoading, setPreviewLoading]       = useState(false)
+  const [loadingMore, setLoadingMore]             = useState(false)
+  const [nextSkip, setNextSkip]                   = useState(0)
+  const [hasMore, setHasMore]                     = useState(true)
+  const [totalMatches, setTotalMatches]           = useState(0)
+  const [currentIndex, setCurrentIndex]           = useState(0)
+  const [selectedLabels, setSelectedLabels]       = useState([])
   const [submittedDecisions, setSubmittedDecisions] = useState({})
-  const [submitLoading, setSubmitLoading] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-  const [submitMessage, setSubmitMessage] = useState('')
-  const [tiktokContentType, setTiktokContentType] = useState(
-    TIKTOK_CONTENT_TYPES.VIDEOS,
-  )
-  const [filterField, setFilterField] = useState('')
-  const [filterValueInput, setFilterValueInput] = useState('')
-  const [appliedFilter, setAppliedFilter] = useState({ field: '', value: '' })
-  const reviewPositionByKeyRef = useRef({})
+  const [submitLoading, setSubmitLoading]         = useState(false)
+  const [submitError, setSubmitError]             = useState('')
+  const [filterValueInput, setFilterValueInput]   = useState('')
+  const [appliedFilter, setAppliedFilter]         = useState({ field: '', value: '' })
+  const [toast, setToast]                         = useState(null)
+  const toastTimer                                = useRef(null)
+  const reviewPositionByKeyRef                    = useRef({})
+
+  function showToast(message, type = 'success') {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ message, type })
+    toastTimer.current = setTimeout(() => setToast(null), 3500)
+  }
 
   const selectedDatabase = useMemo(() => {
-    if (catalog.length === 0) {
-      return null
-    }
-
+    if (!catalog.length) return null
     return (
-      catalog.find((database) => database.name.toLowerCase().includes('silver')) ||
-      catalog.find((database) => database.name.toLowerCase() === 'silver') ||
-      // catalog.find((database) => database.name.toLowerCase() === 'centinela') || // antes: base principal
+      catalog.find((db) => db.name.toLowerCase() === 'silver') ||
+      catalog.find((db) => db.name.toLowerCase().includes('silver')) ||
       catalog[0]
     )
   }, [catalog])
 
   const activeConfig = useMemo(
-    () => PLATFORM_CONFIG.find((platform) => platform.id === activePlatform),
+    () => PLATFORM_CONFIG.find((p) => p.id === activePlatform),
     [activePlatform],
   )
 
   const selectedCollection = useMemo(() => {
-    if (!selectedDatabase || !activeConfig) {
-      return ''
-    }
-
+    if (!selectedDatabase || !activeConfig) return ''
     if (activePlatform === 'tiktok') {
-      const preferred = getTiktokCollectionByContentType(
-        selectedDatabase,
-        tiktokContentType,
-      )
-      if (preferred) {
-        return preferred
-      }
-
-      const fallbackType =
-        tiktokContentType === TIKTOK_CONTENT_TYPES.VIDEOS
-          ? TIKTOK_CONTENT_TYPES.USERS
-          : TIKTOK_CONTENT_TYPES.VIDEOS
-      return getTiktokCollectionByContentType(selectedDatabase, fallbackType)
+      const col =
+        tiktokType === TIKTOK_TYPES.USERS
+          ? getCollection(selectedDatabase, ['tiktok_usuarios', 'tiktok_users'])
+          : getCollection(selectedDatabase, ['tiktok_videos'])
+      return col || getCollection(selectedDatabase, activeConfig.collectionCandidates)
     }
+    if (activePlatform === 'telegram') {
+      return telegramType === TELEGRAM_TYPES.CHANNELS
+        ? getCollection(selectedDatabase, ['telegram_channels'])
+        : getCollection(selectedDatabase, ['telegram_messages'])
+    }
+    return getCollection(selectedDatabase, activeConfig.collectionCandidates)
+  }, [selectedDatabase, activeConfig, activePlatform, tiktokType, telegramType])
 
-    return getAvailableCollectionForPlatform(activeConfig, selectedDatabase)
-  }, [selectedDatabase, activeConfig, activePlatform, tiktokContentType])
+  const tiktokAvail = useMemo(() => ({
+    videos:   Boolean(getCollection(selectedDatabase, ['tiktok_videos'])),
+    usuarios: Boolean(getCollection(selectedDatabase, ['tiktok_usuarios', 'tiktok_users'])),
+  }), [selectedDatabase])
 
-  const tiktokCollectionsAvailability = useMemo(
-    () => ({
-      videos: Boolean(
-        getTiktokCollectionByContentType(selectedDatabase, TIKTOK_CONTENT_TYPES.VIDEOS),
-      ),
-      usuarios: Boolean(
-        getTiktokCollectionByContentType(selectedDatabase, TIKTOK_CONTENT_TYPES.USERS),
-      ),
-    }),
-    [selectedDatabase],
-  )
-
-  const activeFilters = useMemo(() => activeConfig?.filters || [], [activeConfig])
-
-  const platformChartData = useMemo(
-    () =>
-      PLATFORM_CONFIG.map((platform) => ({
-        ...platform,
-        count: Number.isFinite(platformCounts[platform.id])
-          ? platformCounts[platform.id]
-          : 0,
-        available:
-          Boolean(getAvailableCollectionForPlatform(platform, selectedDatabase)) || false,
-      })),
-    [platformCounts, selectedDatabase],
-  )
-
-  const maxPlatformCount = useMemo(
-    () => Math.max(1, ...platformChartData.map((platform) => platform.count)),
-    [platformChartData],
-  )
+  const telegramAvail = useMemo(() => ({
+    messages: Boolean(getCollection(selectedDatabase, ['telegram_messages'])),
+    channels: Boolean(getCollection(selectedDatabase, ['telegram_channels'])),
+  }), [selectedDatabase])
 
   const reviewSessionKey = useMemo(
-    () =>
-      `${activePlatform}::${selectedCollection || 'no-collection'}::${
-        appliedFilter.field || 'no-field'
-      }::${appliedFilter.value || 'no-value'}`,
-    [activePlatform, appliedFilter.field, appliedFilter.value, selectedCollection],
+    () => `${activePlatform}::${selectedCollection}::${appliedFilter.field}::${appliedFilter.value}`,
+    [activePlatform, selectedCollection, appliedFilter],
   )
 
-  const appliedFilterLabel = useMemo(() => {
-    if (!appliedFilter.field) {
-      return ''
-    }
-
-    return (
-      activeFilters.find((filter) => filter.value === appliedFilter.field)?.label ||
-      appliedFilter.field
-    )
-  }, [activeFilters, appliedFilter.field])
-
   const normalizedItems = useMemo(() => {
-    const documents = items || []
-    const isTiktokUsersCollection =
-      activePlatform === 'tiktok' && selectedCollection.includes('usuarios')
-
-    return documents.map((document, index) => {
-      const fallbackId = `${activePlatform}-${index}`
-      const id = document._id || document.id || fallbackId
-
-      if (activePlatform === 'telegram') {
-        return {
-          id,
-          source: document.channel_name || 'Canal sin nombre',
-          text: document.text || 'Sin texto disponible',
-          url: document.url || '',
-        }
+    return items.map((doc, idx) => {
+      const id  = doc._id || doc.id || `${activePlatform}-${idx}`
+      const nlp = {
+        categoria: doc.categoria_principal || '',
+        score:     typeof doc.riesgo_score === 'number' ? doc.riesgo_score : null,
+        nivel:     doc.nivel_riesgo || '',
       }
 
       if (activePlatform === 'youtube') {
         return {
           id,
-          source: document.channel_name || document.channel_title || 'Canal YouTube',
-          text:
-            document.text ||
-            document.description ||
-            document.title ||
-            'Sin texto disponible',
-          url: document.url || '',
+          source: doc.channel_name || doc.channel_title || 'Canal YouTube',
+          text:   doc.title || doc.description || doc.text || 'Sin texto disponible',
+          url:    doc.url || '',
+          nlp,
         }
       }
 
-      if (isTiktokUsersCollection) {
+      if (activePlatform === 'telegram') {
+        if (selectedCollection === 'telegram_channels') {
+          return {
+            id,
+            source: doc.title || (doc.username ? `@${doc.username}` : 'Canal sin nombre'),
+            text:   doc.about || doc.description || 'Sin descripción disponible',
+            url:    doc.username ? `https://t.me/${doc.username}` : (doc.url || ''),
+            nlp,
+          }
+        }
         return {
           id,
-          source:
-            document.username ||
-            document.user_name ||
-            document.author ||
-            document.author_username ||
-            document.autor_username ||
-            document.channel_name ||
-            'Usuario de TikTok',
-          text:
-            document.bio ||
-            document.signature ||
-            document.descripcion ||
-            document.description ||
-            document.text ||
-            'Sin texto disponible',
-          url: document.url || document.profile_url || '',
+          source: doc.channel_name || 'Canal sin nombre',
+          text:   doc.text || 'Sin texto disponible',
+          url:    doc.url || '',
+          nlp,
         }
       }
 
-      return {
-        id,
-        source: document.channel_name || document.author || 'Descripción del TikTok',
-        text:
-          document.descripcion ||
-          document.description ||
-          document.text ||
-          document.caption ||
-          'Sin texto disponible',
-        url: document.url || '',
+      if (activePlatform === 'tiktok') {
+        const isUsers = selectedCollection.includes('usuario') || selectedCollection.includes('user')
+        if (isUsers) {
+          return {
+            id,
+            source: doc.username || doc.user_name || doc.author || 'Usuario TikTok',
+            text:   doc.bio || doc.signature || doc.descripcion || doc.description || 'Sin bio disponible',
+            url:    doc.url || doc.profile_url || '',
+            nlp,
+          }
+        }
+        return {
+          id,
+          source: doc.author || doc.autor_username || doc.channel_name || 'Video TikTok',
+          text:   doc.descripcion || doc.description || doc.caption || doc.text || 'Sin descripción',
+          url:    doc.url || '',
+          nlp,
+        }
       }
+
+      return { id, source: 'Desconocido', text: 'Sin texto', url: '', nlp }
     })
-  }, [activePlatform, items, selectedCollection])
+  }, [items, activePlatform, selectedCollection])
 
   const currentItem = normalizedItems[currentIndex] || null
-  const submittedEntries = Object.entries(submittedDecisions)
 
-  const sessionReviewedCount = submittedEntries.length
-  const sessionSafeCount = submittedEntries.filter(([, labels]) =>
-    Array.isArray(labels) && labels.includes('seguro'),
-  ).length
-  const sessionGoldenCount = sessionReviewedCount - sessionSafeCount
-  const progressPercent =
-    totalMatches > 0 ? Math.min(100, (sessionReviewedCount / totalMatches) * 100) : 0
+  const submittedEntries   = Object.entries(submittedDecisions)
+  const sessionReviewed    = submittedEntries.length
+  const sessionSafe        = submittedEntries.filter(([, l]) => l.includes('seguro')).length
+  const sessionGolden      = sessionReviewed - sessionSafe
+  const progressPercent    = totalMatches > 0 ? Math.min(100, (sessionReviewed / totalMatches) * 100) : 0
 
   useEffect(() => {
     reviewPositionByKeyRef.current[reviewSessionKey] = currentIndex
@@ -301,683 +194,398 @@ function HomePage({ currentUser = 'Asharet' }) {
   useEffect(() => {
     async function loadCatalog() {
       try {
-        const response = await fetch('/api/catalog')
-        const payload = await response.json()
-
-        if (!response.ok || !payload.ok) {
-          setCatalogError(payload.message || 'No se pudo cargar el catálogo')
-          return
-        }
-
+        const res     = await fetch('/api/catalog')
+        const payload = await res.json()
+        if (!res.ok || !payload.ok) { setCatalogError(payload.message || 'Error al cargar catálogo'); return }
         setCatalog(payload.databases || [])
-      } catch (error) {
-        setCatalogError(
-          error instanceof Error ? error.message : 'No se pudo cargar el catálogo',
-        )
+      } catch (e) {
+        setCatalogError(e.message || 'Error de red')
       }
     }
-
     loadCatalog()
   }, [])
 
   useEffect(() => {
-    let cancelled = false
+    if (!selectedDatabase) { setPlatformCounts({}); return }
+    async function loadCounts() {
+      const entries = await Promise.all(
+        PLATFORM_CONFIG.map(async (platform) => {
+          const cols =
+            platform.id === 'tiktok'
+              ? [...new Set([
+                  getCollection(selectedDatabase, ['tiktok_videos']),
+                  getCollection(selectedDatabase, ['tiktok_usuarios', 'tiktok_users']),
+                ].filter(Boolean))]
+              : [getCollection(selectedDatabase, platform.collectionCandidates)].filter(Boolean)
 
-    async function loadPlatformCounts() {
-      if (!selectedDatabase) {
-        setPlatformCounts({})
-        setPlatformCountsLoading(false)
-        setPlatformCountsError('')
-        return
-      }
-
-      setPlatformCountsLoading(true)
-      setPlatformCountsError('')
-
-      try {
-        const entries = await Promise.all(
-          PLATFORM_CONFIG.map(async (platform) => {
-            if (platform.id === 'tiktok') {
-              const tiktokCollections = [
-                getTiktokCollectionByContentType(
-                  selectedDatabase,
-                  TIKTOK_CONTENT_TYPES.VIDEOS,
-                ),
-                getTiktokCollectionByContentType(
-                  selectedDatabase,
-                  TIKTOK_CONTENT_TYPES.USERS,
-                ),
-              ].filter(Boolean)
-
-              const uniqueCollections = [...new Set(tiktokCollections)]
-              if (uniqueCollections.length === 0) {
-                return [platform.id, 0]
-              }
-
-              const totals = await Promise.all(
-                uniqueCollections.map(async (collectionName) => {
-                  const response = await fetch(
-                    `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
-                      collectionName,
-                    )}/preview?skip=0&limit=1`,
-                  )
-                  const payload = await response.json()
-
-                  if (!response.ok || !payload.ok) {
-                    return 0
-                  }
-
-                  return Number.isInteger(payload.total) ? payload.total : 0
-                }),
-              )
-
-              const combinedTotal = totals.reduce((sum, total) => sum + total, 0)
-              return [platform.id, combinedTotal]
-            }
-
-            const availableCollection = getAvailableCollectionForPlatform(
-              platform,
-              selectedDatabase,
-            )
-            if (!availableCollection) {
-              return [platform.id, 0]
-            }
-
-            const response = await fetch(
-              `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
-                availableCollection,
-              )}/preview?skip=0&limit=1`,
-            )
-            const payload = await response.json()
-
-            if (!response.ok || !payload.ok) {
-              return [platform.id, 0]
-            }
-
-            const total = Number.isInteger(payload.total) ? payload.total : 0
-            return [platform.id, total]
-          }),
-        )
-
-        if (!cancelled) {
-          setPlatformCounts(Object.fromEntries(entries))
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setPlatformCountsError(
-            error instanceof Error
-              ? error.message
-              : 'No se pudieron cargar los conteos por red',
+          if (!cols.length) return [platform.id, 0]
+          const totals = await Promise.all(
+            cols.map(async (col) => {
+              try {
+                const res     = await fetch(`/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(col)}/preview?skip=0&limit=1`)
+                const payload = await res.json()
+                return (res.ok && payload.ok && Number.isInteger(payload.total)) ? payload.total : 0
+              } catch { return 0 }
+            }),
           )
-        }
-      } finally {
-        if (!cancelled) {
-          setPlatformCountsLoading(false)
-        }
-      }
+          return [platform.id, totals.reduce((s, t) => s + t, 0)]
+        }),
+      )
+      setPlatformCounts(Object.fromEntries(entries))
     }
-
-    loadPlatformCounts()
-
-    return () => {
-      cancelled = true
-    }
+    loadCounts()
   }, [selectedDatabase])
 
   useEffect(() => {
-    if (!selectedDatabase || !selectedCollection) {
-      setItems([])
-      setPreviewLoading(false)
-      return
-    }
-
-    async function loadPreviewBatch(startSkip, replaceItems) {
-      if (replaceItems) {
-        setPreviewLoading(true)
-      } else {
-        setLoadingMore(true)
-      }
-
-      setPreviewError('')
-
-      try {
-        const params = new URLSearchParams({
-          skip: String(startSkip),
-          limit: String(BATCH_SIZE),
-        })
-
-        if (appliedFilter.value) {
-          params.set('filterField', appliedFilter.field)
-          params.set('filterValue', appliedFilter.value)
-        }
-
-        const response = await fetch(
-          `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
-            selectedCollection,
-          )}/preview?${params.toString()}`,
-        )
-        const payload = await response.json()
-
-        if (!response.ok || !payload.ok) {
-          if (replaceItems) {
-            setItems([])
-          }
-          setPreviewError(payload.message || 'No se pudo cargar la vista previa')
-          return
-        }
-
-        const docs = payload.documents || []
-        setItems((current) => (replaceItems ? docs : [...current, ...docs]))
-        setTotalMatches(Number.isInteger(payload.total) ? payload.total : docs.length)
-        setHasMore(Boolean(payload.hasMore))
-        setNextSkip(
-          Number.isInteger(payload.nextSkip)
-            ? payload.nextSkip
-            : startSkip + docs.length,
-        )
-      } catch (error) {
-        if (replaceItems) {
-          setItems([])
-        }
-        setPreviewError(
-          error instanceof Error ? error.message : 'No se pudo cargar la vista previa',
-        )
-      } finally {
-        if (replaceItems) {
-          setPreviewLoading(false)
-        } else {
-          setLoadingMore(false)
-        }
-      }
-    }
-
+    if (!selectedDatabase || !selectedCollection) { setItems([]); return }
     const savedIndex = reviewPositionByKeyRef.current[reviewSessionKey] ?? 0
     setCurrentIndex(savedIndex)
     setSelectedLabels([])
     setNextSkip(0)
     setHasMore(true)
     setTotalMatches(0)
-    loadPreviewBatch(0, true)
+    loadBatch(0, true)
   }, [selectedDatabase, selectedCollection, appliedFilter, reviewSessionKey])
 
   useEffect(() => {
     setSelectedLabels([])
     setSubmittedDecisions({})
     setSubmitError('')
-    setSubmitMessage('')
-    const defaultFilterField = activeConfig?.filters?.[0]?.value || ''
-    setFilterField(defaultFilterField)
     setFilterValueInput('')
     setAppliedFilter({ field: '', value: '' })
-  }, [activeConfig, activePlatform])
+  }, [activePlatform])
 
   useEffect(() => {
-    if (
-      !selectedCollection ||
-      previewLoading ||
-      loadingMore ||
-      !hasMore ||
-      currentItem ||
-      currentIndex < normalizedItems.length
-    ) {
-      return
-    }
+    if (!selectedCollection || previewLoading || loadingMore || !hasMore || currentItem) return
+    if (currentIndex < normalizedItems.length) return
+    loadBatch(nextSkip, false)
+  }, [currentIndex, currentItem, hasMore, loadingMore, nextSkip, normalizedItems.length, previewLoading, selectedCollection])
 
-    async function loadMoreBatch() {
-      setLoadingMore(true)
-      setPreviewError('')
-
-      try {
-        const params = new URLSearchParams({
-          skip: String(nextSkip),
-          limit: String(BATCH_SIZE),
-        })
-
-        if (appliedFilter.value) {
-          params.set('filterField', appliedFilter.field)
-          params.set('filterValue', appliedFilter.value)
-        }
-
-        const response = await fetch(
-          `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
-            selectedCollection,
-          )}/preview?${params.toString()}`,
-        )
-        const payload = await response.json()
-
-        if (!response.ok || !payload.ok) {
-          setPreviewError(payload.message || 'No se pudo cargar más mensajes')
-          return
-        }
-
-        const docs = payload.documents || []
-        setItems((current) => [...current, ...docs])
-        setTotalMatches(Number.isInteger(payload.total) ? payload.total : docs.length)
-        setHasMore(Boolean(payload.hasMore))
-        setNextSkip(
-          Number.isInteger(payload.nextSkip)
-            ? payload.nextSkip
-            : nextSkip + docs.length,
-        )
-      } catch (error) {
-        setPreviewError(
-          error instanceof Error ? error.message : 'No se pudo cargar más mensajes',
-        )
-      } finally {
-        setLoadingMore(false)
+  async function loadBatch(skip, replace) {
+    if (replace) setPreviewLoading(true); else setLoadingMore(true)
+    setPreviewError('')
+    try {
+      const params = new URLSearchParams({ skip: String(skip), limit: String(BATCH_SIZE) })
+      if (appliedFilter.value) {
+        params.set('filterField', appliedFilter.field)
+        params.set('filterValue', appliedFilter.value)
       }
+      const res     = await fetch(`/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(selectedCollection)}/preview?${params}`)
+      const payload = await res.json()
+      if (!res.ok || !payload.ok) { if (replace) setItems([]); setPreviewError(payload.message || 'Error al cargar'); return }
+      const docs = payload.documents || []
+      setItems((cur) => replace ? docs : [...cur, ...docs])
+      setTotalMatches(Number.isInteger(payload.total) ? payload.total : docs.length)
+      setHasMore(Boolean(payload.hasMore))
+      setNextSkip(Number.isInteger(payload.nextSkip) ? payload.nextSkip : skip + docs.length)
+    } catch (e) {
+      if (replace) setItems([])
+      setPreviewError(e.message || 'Error de red')
+    } finally {
+      if (replace) setPreviewLoading(false); else setLoadingMore(false)
     }
-
-    loadMoreBatch()
-  }, [
-    currentIndex,
-    currentItem,
-    hasMore,
-    loadingMore,
-    nextSkip,
-    normalizedItems.length,
-    previewLoading,
-    appliedFilter,
-    selectedCollection,
-    selectedDatabase,
-  ])
-
-  function handleApplyFilter() {
-    const normalizedValue = filterValueInput.trim()
-    if (!normalizedValue || !filterField) {
-      setAppliedFilter({ field: '', value: '' })
-      return
-    }
-
-    setAppliedFilter({
-      field: filterField,
-      value: normalizedValue,
-    })
-  }
-
-  function handleClearFilter() {
-    setFilterValueInput('')
-    setAppliedFilter({ field: '', value: '' })
   }
 
   function handleToggleLabel(label) {
-    setSelectedLabels((current) => {
-      if (label === 'seguro') {
-        return current.includes('seguro') ? [] : ['seguro']
-      }
-
-      const base = current.filter((item) => item !== 'seguro')
-      if (base.includes(label)) {
-        return base.filter((item) => item !== label)
-      }
-
-      return [...base, label]
+    setSelectedLabels((cur) => {
+      if (label === 'seguro') return cur.includes('seguro') ? [] : ['seguro']
+      const base = cur.filter((l) => l !== 'seguro')
+      return base.includes(label) ? base.filter((l) => l !== label) : [...base, label]
     })
   }
 
-  async function handleSendDecision() {
-    if (!currentItem || selectedLabels.length === 0) {
-      return
-    }
+  function handleSkip() {
+    setSelectedLabels([])
+    setSubmitError('')
+    setCurrentIndex((i) => i + 1)
+  }
 
+  async function handleSendDecision() {
+    if (!currentItem || selectedLabels.length === 0) return
     setSubmitLoading(true)
     setSubmitError('')
-    setSubmitMessage('')
-
     try {
-      const response = await fetch('/api/moderation/label', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sourceDatabase: selectedDatabase?.name,
+      const res     = await fetch('/api/moderation/label', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          sourceDatabase:   selectedDatabase?.name,
           sourceCollection: selectedCollection,
-          labels: selectedLabels,
-          documentId: currentItem.id,
-          platform: activePlatform,
-          taggedBy: currentUser,
+          labels:           selectedLabels,
+          documentId:       currentItem.id,
+          taggedBy:         currentUser,
         }),
       })
+      const payload = await res.json()
+      if (!res.ok || !payload.ok) { setSubmitError(payload.message || 'Error al enviar'); return }
 
-      const payload = await response.json()
-
-      if (!response.ok || !payload.ok) {
-        setSubmitError(payload.message || 'No se pudo enviar la clasificación')
-        return
+      if (payload.skipped) {
+        showToast('Marcado como seguro — omitido de Golden', 'info')
+      } else {
+        showToast(`Enviado a Golden: ${selectedLabels.join(' + ')}`, 'success')
       }
 
-      if (payload.copied) {
-        setSubmitMessage('')
-      } else if (payload.skipped) {
-        setSubmitMessage('')
-      }
-
-      setSubmittedDecisions((current) => ({
-        ...current,
-        [currentItem.id]: selectedLabels,
-      }))
+      setSubmittedDecisions((cur) => ({ ...cur, [currentItem.id]: selectedLabels }))
       setSelectedLabels([])
-      setCurrentIndex((value) => value + 1)
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'No se pudo enviar la clasificación',
-      )
+      setCurrentIndex((i) => i + 1)
+    } catch (e) {
+      setSubmitError(e.message || 'Error de red')
     } finally {
       setSubmitLoading(false)
     }
   }
 
+  const maxCount = Math.max(1, ...PLATFORM_CONFIG.map((p) => platformCounts[p.id] || 0))
+
   return (
-    <section className="home-page home-page--dashboard">
-      <aside className="catalog-sidebar">
-        <div className="catalog-sidebar__top">
-          <h2>Registros por red social</h2>
-          <p>Distribución actual de registros disponibles en Silver.</p>
+    <div className="home-page">
 
-          {platformCountsLoading ? (
-            <p className="catalog-sidebar__loading">Cargando gráfica...</p>
-          ) : null}
+      {/* ── TOAST ────────────────────────────────── */}
+      {toast && (
+        <div className={`toast toast--${toast.type}`} role="status">
+          {toast.type === 'success' ? '✓' : 'ℹ'} {toast.message}
+        </div>
+      )}
 
-          {platformCountsError ? (
-            <div className="mongo-status mongo-status--error">{platformCountsError}</div>
-          ) : (
-            <div className="platform-chart" aria-label="Gráfica de barras por red social">
-              {platformChartData.map((platform) => {
-                const widthPercent = Math.max(
-                  4,
-                  Math.round((platform.count / maxPlatformCount) * 100),
-                )
+      {/* ── SIDEBAR ──────────────────────────────── */}
+      <aside className="sidebar">
+        <div className="sidebar__counts">
+          <h2 className="sidebar__title">Registros en Silver</h2>
+          <div className="platform-bars">
+            {PLATFORM_CONFIG.map((p) => {
+              const count = platformCounts[p.id] || 0
+              const pct   = Math.max(4, Math.round((count / maxCount) * 100))
+              return (
+                <div key={p.id} className="platform-bar">
+                  <div className="platform-bar__meta">
+                    <span>{p.label}</span>
+                    <strong>{count.toLocaleString('es-MX')}</strong>
+                  </div>
+                  <div className="platform-bar__track">
+                    <div className={`platform-bar__fill platform-bar__fill--${p.id}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
-                return (
-                  <article key={platform.id} className="platform-chart__row">
-                    <div className="platform-chart__meta">
-                      <span className="platform-chart__name">{platform.label}</span>
-                      <strong className="platform-chart__value">
-                        {platform.count.toLocaleString('es-MX')}
-                      </strong>
-                    </div>
-                    <div className="platform-chart__track" aria-hidden="true">
-                      <div
-                        className={`platform-chart__fill platform-chart__fill--${platform.id} ${
-                          platform.available ? '' : 'is-unavailable'
-                        }`}
-                        style={{ width: `${widthPercent}%` }}
-                      />
-                    </div>
-                  </article>
-                )
-              })}
+        <nav className="sidebar__nav">
+          {PLATFORM_CONFIG.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`platform-btn platform-btn--${p.id} ${activePlatform === p.id ? 'is-active' : ''}`}
+              onClick={() => setActivePlatform(p.id)}
+            >
+              <span className="platform-btn__icon">{p.icon}</span>
+              <span className="platform-btn__label">{p.label}</span>
+              <span className="platform-btn__count">{(platformCounts[p.id] || 0).toLocaleString('es-MX')}</span>
+            </button>
+          ))}
+        </nav>
+
+        {catalogError && <p className="error-note">{catalogError}</p>}
+      </aside>
+
+      {/* ── MAIN ─────────────────────────────────── */}
+      <main className="review-main">
+
+        {/* Platform header + subtypes toggle */}
+        <div className="review-header">
+          <div>
+            <h2 className="review-header__title">{activeConfig?.label}</h2>
+            <p className="review-header__desc">{activeConfig?.description}</p>
+          </div>
+
+          {activePlatform === 'tiktok' && (
+            <div className="subtype-toggle" role="group">
+              <button type="button"
+                className={`subtype-toggle__btn ${tiktokType === TIKTOK_TYPES.VIDEOS ? 'is-active' : ''}`}
+                onClick={() => setTiktokType(TIKTOK_TYPES.VIDEOS)}
+                disabled={!tiktokAvail.videos}>
+                Videos
+              </button>
+              <button type="button"
+                className={`subtype-toggle__btn ${tiktokType === TIKTOK_TYPES.USERS ? 'is-active' : ''}`}
+                onClick={() => setTiktokType(TIKTOK_TYPES.USERS)}
+                disabled={!tiktokAvail.usuarios}>
+                Usuarios
+              </button>
+            </div>
+          )}
+
+          {activePlatform === 'telegram' && (
+            <div className="subtype-toggle" role="group">
+              <button type="button"
+                className={`subtype-toggle__btn ${telegramType === TELEGRAM_TYPES.MESSAGES ? 'is-active' : ''}`}
+                onClick={() => setTelegramType(TELEGRAM_TYPES.MESSAGES)}
+                disabled={!telegramAvail.messages}>
+                Mensajes
+              </button>
+              <button type="button"
+                className={`subtype-toggle__btn ${telegramType === TELEGRAM_TYPES.CHANNELS ? 'is-active' : ''}`}
+                onClick={() => setTelegramType(TELEGRAM_TYPES.CHANNELS)}
+                disabled={!telegramAvail.channels}>
+                Canales
+              </button>
             </div>
           )}
         </div>
 
-        {catalogError ? (
-          <div className="mongo-status mongo-status--error">{catalogError}</div>
-        ) : null}
+        {/* Filter bar */}
+        <div className="filter-bar">
+          <input
+            type="text"
+            className="filter-bar__input"
+            placeholder="Buscar por texto, canal, usuario..."
+            value={filterValueInput}
+            onChange={(e) => setFilterValueInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setAppliedFilter({ field: '', value: filterValueInput.trim() }) }}
+          />
+          <button type="button" className="filter-bar__btn"
+            onClick={() => setAppliedFilter({ field: '', value: filterValueInput.trim() })}>
+            Buscar
+          </button>
+          {appliedFilter.value && (
+            <button type="button" className="filter-bar__btn filter-bar__btn--ghost"
+              onClick={() => { setFilterValueInput(''); setAppliedFilter({ field: '', value: '' }) }}>
+              × Limpiar
+            </button>
+          )}
+        </div>
 
-        <nav className="catalog-nav" aria-label="Redes sociales">
-          <ul className="social-nav">
-            {PLATFORM_CONFIG.map((platform) => {
-              const isActive = platform.id === activePlatform
-              const available = Boolean(
-                getAvailableCollectionForPlatform(platform, selectedDatabase),
-              )
+        {/* Progress + counter */}
+        <div className="progress-row">
+          <span className="progress-row__label">
+            {totalMatches > 0
+              ? `Registro ${Math.min(currentIndex + 1, totalMatches)} de ${totalMatches}`
+              : previewLoading ? 'Cargando...' : 'Sin registros'}
+          </span>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="progress-row__pct">{progressPercent.toFixed(0)}%</span>
+        </div>
 
-              return (
-                <li key={platform.id}>
-                  <button
-                    type="button"
-                    className={`social-nav__button platform--${platform.id} ${isActive ? 'is-active' : ''}`}
-                    onClick={() => setActivePlatform(platform.id)}
-                  >
-                    <span>{platform.label}</span>
-                    <small>{available ? 'Disponible' : 'Próximamente'}</small>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </aside>
+        {/* Error */}
+        {previewError && <p className="error-note">{previewError}</p>}
 
-      <main className="catalog-main">
-        <header className="catalog-main__hero">
-          <p className="catalog-main__eyebrow">Red social activa</p>
-          <h3>{activeConfig?.label || 'Red social'}</h3>
-          <p>{activeConfig?.description}</p>
+        {/* Review card */}
+        {selectedCollection && currentItem ? (
+          <article className="review-card">
 
-          {activePlatform === 'tiktok' ? (
-            <div className="tiktok-content-toggle" role="group" aria-label="Tipo de contenido TikTok">
-              <button
-                type="button"
-                className={`tiktok-content-toggle__button ${
-                  tiktokContentType === TIKTOK_CONTENT_TYPES.VIDEOS ? 'is-active' : ''
-                }`}
-                onClick={() => setTiktokContentType(TIKTOK_CONTENT_TYPES.VIDEOS)}
-                disabled={!tiktokCollectionsAvailability.videos}
-              >
-                Videos
-              </button>
-              <button
-                type="button"
-                className={`tiktok-content-toggle__button ${
-                  tiktokContentType === TIKTOK_CONTENT_TYPES.USERS ? 'is-active' : ''
-                }`}
-                onClick={() => setTiktokContentType(TIKTOK_CONTENT_TYPES.USERS)}
-                disabled={!tiktokCollectionsAvailability.usuarios}
-              >
-                Usuarios
-              </button>
-            </div>
-          ) : null}
-        </header>
-
-        <section className="catalog-filters">
-          <div className="catalog-filters__header">
-            <h4>Filtros</h4>
-            {appliedFilter.value ? (
-              <span>
-                Filtrando por {appliedFilterLabel}: "{appliedFilter.value}"
-              </span>
+            {/* NLP badge */}
+            {currentItem.nlp.categoria ? (
+              <div className={`nlp-badge nlp-badge--${currentItem.nlp.nivel || 'medio'}`}>
+                <span className="nlp-badge__label">IA detectó</span>
+                <strong className="nlp-badge__categoria">{currentItem.nlp.categoria}</strong>
+                {currentItem.nlp.score !== null && (
+                  <span className="nlp-badge__score">
+                    {(currentItem.nlp.score * 100).toFixed(0)}%
+                    {currentItem.nlp.nivel ? ` · ${currentItem.nlp.nivel.toUpperCase()}` : ''}
+                  </span>
+                )}
+              </div>
             ) : (
-              <span>Sin filtro activo</span>
+              <div className="nlp-badge nlp-badge--unknown">
+                <span className="nlp-badge__label">Sin clasificación IA</span>
+              </div>
             )}
-          </div>
 
-          <p className="catalog-filters__session">Etiquetado por: {currentUser}</p>
-
-          <div className="catalog-filters__controls">
-            <select
-              value={filterField}
-              onChange={(event) => setFilterField(event.target.value)}
-              disabled={activeFilters.length === 0}
-            >
-              {activeFilters.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              value={filterValueInput}
-              onChange={(event) => setFilterValueInput(event.target.value)}
-              placeholder="Escribe para filtrar..."
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  handleApplyFilter()
-                }
-              }}
-            />
-
-            <button type="button" className="filter-button" onClick={handleApplyFilter}>
-              Aplicar
-            </button>
-            <button
-              type="button"
-              className="filter-button filter-button--ghost"
-              onClick={handleClearFilter}
-            >
-              Limpiar
-            </button>
-          </div>
-        </section>
-
-        <section className="session-metrics" aria-label="Resumen de sesión">
-          <article className="session-metric">
-            <p>
-              Revisados
-              <br />
-              en sesión
-            </p>
-            <strong>{sessionReviewedCount}</strong>
-          </article>
-          <article className="session-metric">
-            <p>
-              Etiquetados
-              <br />
-              de riesgo
-            </p>
-            <strong>{sessionGoldenCount}</strong>
-          </article>
-          <article className="session-metric">
-            <p>
-              Seguros
-              <br />
-              en sesión
-            </p>
-            <strong>{sessionSafeCount}</strong>
-          </article>
-          <article className="session-metric">
-            <p>
-              Enviados a
-              <br />
-              Golden
-            </p>
-            <strong>{sessionGoldenCount}</strong>
-          </article>
-        </section>
-
-        <section className="preview-panel">
-          <div className="preview-panel__header">
-            <h4>Mensajes para clasificar</h4>
-            <span>
-              {selectedCollection
-                ? previewLoading
-                  ? 'Cargando...'
-                  : totalMatches > 0
-                    ? `${Math.min(currentIndex + 1, totalMatches)} de ${totalMatches}`
-                    : '0 de 0'
-                : 'Sin fuente disponible'}
-            </span>
-          </div>
-
-          <div className="session-progress">
-            <div className="session-progress__labels">
-              <span>Progreso de sesión</span>
-              <strong>{progressPercent.toFixed(0)}%</strong>
+            {/* Source */}
+            <div className="review-card__source">
+              <span className="review-card__source-tag">{activeConfig?.label}</span>
+              <strong>{currentItem.source}</strong>
             </div>
-            <div className="session-progress__track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Number(progressPercent.toFixed(0))}>
-              <div
-                className="session-progress__fill"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
 
-          {previewError ? (
-            <div className="mongo-status mongo-status--error">{previewError}</div>
-          ) : null}
+            {/* Content */}
+            <p className="review-card__text">{currentItem.text}</p>
 
-          {selectedCollection && currentItem ? (
-            <div className="preview-documents">
-              <article key={currentItem.id} className="message-card">
-                <header className="message-card__header">
-                  <strong>{currentItem.source}</strong>
-                </header>
+            {/* URL */}
+            {currentItem.url && (
+              <a className="review-card__link" href={currentItem.url} target="_blank" rel="noopener noreferrer">
+                Ver fuente original →
+              </a>
+            )}
 
-                <p className="message-card__text">{currentItem.text}</p>
-
-                {currentItem.url ? (
-                  <a
-                    className="message-card__link"
-                    href={currentItem.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {currentItem.url}
-                  </a>
-                ) : null}
-
-                <div className="message-card__actions">
-                  {LABEL_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`tag-button ${
-                        selectedLabels.includes(option.value)
-                          ? option.tone === 'safe'
-                            ? 'is-active-safe'
-                            : 'is-active-risk'
-                          : ''
-                      }`}
-                      onClick={() => handleToggleLabel(option.value)}
-                    >
-                      {option.label}
+            {/* Labels */}
+            <div className="label-section">
+              <p className="label-section__hint">¿Cómo clasificas este contenido?</p>
+              <div className="label-section__row">
+                <button type="button"
+                  className={`label-btn label-btn--safe ${selectedLabels.includes('seguro') ? 'is-selected' : ''}`}
+                  onClick={() => handleToggleLabel('seguro')}>
+                  ✓ Seguro
+                </button>
+                <span className="label-section__divider">o</span>
+                <div className="label-section__risks">
+                  {RISK_LABELS.map((opt) => (
+                    <button key={opt.value} type="button"
+                      className={`label-btn label-btn--risk ${selectedLabels.includes(opt.value) ? 'is-selected' : ''}`}
+                      onClick={() => handleToggleLabel(opt.value)}>
+                      {opt.label}
                     </button>
                   ))}
-
-                  {selectedLabels.length > 0 ? (
-                    <button
-                      type="button"
-                      className="send-button"
-                      onClick={handleSendDecision}
-                      disabled={submitLoading}
-                    >
-                      {submitLoading ? 'Enviando...' : 'Enviar'}
-                    </button>
-                  ) : null}
                 </div>
-
-                <p className="tag-state">
-                  {selectedLabels.length > 0
-                    ? `Selección actual: ${selectedLabels.join(', ')}`
-                    : 'Selecciona una o más etiquetas para habilitar Enviar'}
+              </div>
+              {selectedLabels.length > 0 && (
+                <p className="label-selection">
+                  Selección: <strong>{selectedLabels.join(' + ')}</strong>
                 </p>
-
-                <p className="tag-state">
-                  Seguro es exclusivo. Narcocultura, oferta de riesgo y reclutamiento
-                  pueden combinarse.
-                </p>
-
-                {submitError ? <p className="submit-feedback is-error">{submitError}</p> : null}
-                {submitMessage ? (
-                  <p className="submit-feedback is-success">{submitMessage}</p>
-                ) : null}
-              </article>
+              )}
             </div>
-          ) : (
-            <div className="preview-empty">
-              {selectedCollection
-                ? previewLoading || loadingMore
-                  ? 'Cargando documentos...'
-                  : normalizedItems.length === 0
-                    ? 'No hay documentos para mostrar'
-                    : 'No hay más mensajes disponibles por ahora'
-                : 'TikTok estará disponible cuando exista tiktok_videos y tiktok_usuarios/tiktok_users'}
-            </div>
-          )}
 
-          {Object.keys(submittedDecisions).length > 0 ? (
-            <p className="tag-state">
-              Mensajes enviados en esta sesión: {Object.keys(submittedDecisions).length}
-            </p>
-          ) : null}
-        </section>
+            {/* Actions */}
+            <div className="review-card__actions">
+              <button type="button" className="action-btn action-btn--skip" onClick={handleSkip}>
+                Saltar
+              </button>
+              <button type="button"
+                className="action-btn action-btn--send"
+                onClick={handleSendDecision}
+                disabled={submitLoading || selectedLabels.length === 0}>
+                {submitLoading
+                  ? 'Enviando...'
+                  : selectedLabels.includes('seguro')
+                    ? 'Marcar seguro'
+                    : 'Enviar a Golden →'}
+              </button>
+            </div>
+
+            {submitError && <p className="submit-error">{submitError}</p>}
+          </article>
+        ) : (
+          <div className="review-empty">
+            {previewLoading || loadingMore
+              ? 'Cargando registros...'
+              : selectedCollection
+                ? 'No hay más registros en esta sesión'
+                : 'Selecciona una plataforma para comenzar'}
+          </div>
+        )}
+
+        {/* Session stats */}
+        <div className="session-stats">
+          <div className="session-stat">
+            <strong>{sessionReviewed}</strong>
+            <span>Revisados</span>
+          </div>
+          <div className="session-stat session-stat--golden">
+            <strong>{sessionGolden}</strong>
+            <span>A Golden</span>
+          </div>
+          <div className="session-stat session-stat--safe">
+            <strong>{sessionSafe}</strong>
+            <span>Seguros</span>
+          </div>
+          <div className="session-stat">
+            <strong>{sessionReviewed > 0 ? `${((sessionGolden / sessionReviewed) * 100).toFixed(0)}%` : '—'}</strong>
+            <span>Tasa riesgo</span>
+          </div>
+        </div>
       </main>
-    </section>
+    </div>
   )
 }
 
