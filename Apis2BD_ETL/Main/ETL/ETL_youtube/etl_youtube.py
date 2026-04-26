@@ -1,10 +1,13 @@
 import json
 import logging
 import os
+import socket
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+socket.setdefaulttimeout(30)
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
@@ -214,8 +217,12 @@ def run_collection(queries, max_queries=None):
     if not api_key:
         log.error("YOUTUBE_API_KEY no configurada en .env")
         return
-    lexicon        = load_lexicon()
-    yt_client      = build_youtube_client(api_key.strip())
+    lexicon = load_lexicon()
+    try:
+        yt_client = build_youtube_client(api_key.strip())
+    except (TimeoutError, OSError) as e:
+        log.error("No se pudo conectar a la API de YouTube (red): %s", e)
+        sys.exit(1)
     collection     = get_mongo_collection()
     queries        = queries if max_queries is None else queries[:max_queries]
     total_saved    = 0
@@ -223,7 +230,11 @@ def run_collection(queries, max_queries=None):
     channel_cache  = {}   # channel_id → channel_info dict
 
     for query in tqdm(queries, desc="YouTube queries"):
-        search_results = search_videos(yt_client, query)
+        try:
+            search_results = search_videos(yt_client, query)
+        except (TimeoutError, OSError) as e:
+            log.error("Timeout de red en query '%s': %s — abortando ETL", query, e)
+            break
         if not search_results:
             time.sleep(SLEEP_BETWEEN_QUERIES)
             continue

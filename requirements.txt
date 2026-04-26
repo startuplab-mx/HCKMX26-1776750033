@@ -1,4 +1,23 @@
-#Python 3.12.3
-browser_cookie3
-bs4
-requests
+# Python 3.14
+
+# HTTP y scraping
+requests==2.32.3
+browser-cookie3==0.20.1
+bs4==0.0.2
+playwright==1.58.0
+
+# Base de datos
+pymongo==4.17.0
+
+# APIs externas
+google-api-python-client==2.151.0
+telethon==1.37.0
+openai==2.8.1
+
+# NLP / Machine Learning
+torch==2.9.1
+transformers==4.57.3
+
+# Utilidades
+python-dotenv==1.0.1
+tqdm==4.67.1

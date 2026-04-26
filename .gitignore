@@ -1,6 +1,7 @@
 **/__pycache__/
 .venv
 .env
+**/.env
 **.pyc
 test_data/
 .DS_Store
@@ -9,6 +10,7 @@ test_data/
 *.mp3
 *.mp4
 *.txt
+!requirements.txt
 *.xlsx
 exports_golden/
 test_folder/
@@ -23,5 +25,6 @@ README_agentes.md
 *.json
 !json_holdout_prueba.json
 !**/package.json
+!**/package-lock.json
 
 

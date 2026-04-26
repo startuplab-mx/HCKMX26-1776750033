@@ -66,7 +66,7 @@ Reglas estrictas:
 4. Si invocas Agente 1 y retorna total_registros_nuevos = 0 Y el estado del sistema muestra total_pendientes = 0, NO invoques Agente 2. Programa espera larga (24-48h). Si total_pendientes > 0, sí puedes correr Agente 2 aunque el ETL no trajo datos nuevos.
 5. Al final SIEMPRE llama a escribir_reporte con tu decisión y el tiempo de espera.
 6. NO EJECUTES CÓDIGO. Usa exclusivamente tus herramientas.
-7. TikTok ETL DESHABILITADO: NO invoques Agente 1 con plataforma='tiktok'. El scraper de TikTok tiene problemas técnicos temporales. Para NLP de TikTok (Agente 2), sí puedes usarlo si hay pendientes en Bronze.
+7. TikTok ETL DESHABILITADO: NO invoques Agente 1 con plataforma='tiktok'. La recolección de TikTok debe hacerse de forma manual por el operador y cargarse directamente a Bronze. Para NLP de TikTok (Agente 2), sí puedes usarlo si hay pendientes en Bronze.
 8. MENSAJES DEL OPERADOR: Si recibes mensajes del operador humano al inicio del ciclo, úsalos como instrucción directa con máxima prioridad:
    - "cargué datos al bronze" / "actualicé bronze" → ejecuta revisar_estado_sistema y corre Agente 2 si hay pendientes
    - "busca más" / "extrae más" → corre Agente 1 en youtube o telegram (el que lleve más tiempo sin actualizarse)
@@ -219,7 +219,7 @@ def _revisar_estado_sistema() -> dict:
         "ultimo_etl_plataforma":   ultimo_etl.get("objetivo") if ultimo_etl else None,
         "ultimo_etl_nuevos":       ultimo_etl.get("total_registros_nuevos") if ultimo_etl else None,
         "error_reciente":          bool(ultimo_error and _horas(ultimo_error, "fecha_inicio") < 6),
-        "nota":                    "TikTok ETL deshabilitado temporalmente. Solo usar Agente 2 para TikTok."}
+        "nota":                    "TikTok ETL deshabilitado. Recolección manual por operador → Bronze. Agente 2 disponible si hay pendientes."}
 
 
 def _ejecutar_tool(nombre: str, args: dict) -> str:
@@ -592,7 +592,7 @@ class _OrchestratorGUI:
             return "warn"
         if any(w in lo for w in ("orquestador ·", "nlp ·", "etl ·")):
             return "info"
-        if any(w in lo for w in ("sospechosos", "pendientes", "silver", "bronze")):
+        if any(w in lo for w in ("sospechosos", "confirmados", "recolectados", "pendientes")):
             return "data"
         return ""
 
@@ -619,6 +619,8 @@ class _OrchestratorGUI:
                 self._set_active(False, h)
             elif "finalizado" in line.lower():
                 self._set_active(False, "en espera")
+            elif "listo" in line.lower() and "esperando" in line.lower():
+                self._set_active(False, "listo · esperando instrucción")
             elif "iniciando" in line.lower() or "cargando" in line.lower():
                 self._set_active(True, "cargando…")
 
