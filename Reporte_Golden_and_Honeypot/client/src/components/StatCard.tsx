@@ -4,35 +4,35 @@ interface StatCardProps {
   title: string;
   value: number | string;
   icon: LucideIcon;
-  color: 'blue' | 'green' | 'navy' | 'orange';
-  trend?: {
-    value: number;
-    positive: boolean;
-  };
+  color: 'blue' | 'green' | 'violet' | 'orange';
+  trend?: { value: number; positive: boolean };
 }
 
-const colorMap = {
-  blue: 'from-[#2E6DA4] to-[#D5E8F0]',
-  green: 'from-[#1E8449] to-[#4FC3A1]',
-  navy: 'from-[#1B3A5C] to-[#1A4971]',
-  orange: 'from-[#E67E22] to-[#C0392B]',
+const styles: Record<string, { icon: string; value: string; pill: string }> = {
+  blue:   { icon: 'bg-blue-100 text-blue-600',    value: 'text-blue-700',   pill: 'bg-blue-50 border-blue-100' },
+  green:  { icon: 'bg-emerald-100 text-emerald-600', value: 'text-emerald-700', pill: 'bg-emerald-50 border-emerald-100' },
+  violet: { icon: 'bg-violet-100 text-violet-600', value: 'text-violet-700', pill: 'bg-violet-50 border-violet-100' },
+  orange: { icon: 'bg-amber-100 text-amber-600',  value: 'text-amber-700',  pill: 'bg-amber-50 border-amber-100' },
 };
 
 export default function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
+  const s = styles[color];
   return (
-    <div className="card stat-card p-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-slate-300 text-sm font-medium mb-2">{title}</p>
-          <p className="stat-value">{value.toLocaleString()}</p>
+    <div className={`card stat-card p-5 border ${s.pill}`}>
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">{title}</p>
+          <p className={`text-3xl font-bold leading-none ${s.value}`}>
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </p>
           {trend && (
-            <p className={`text-xs mt-2 ${trend.positive ? 'text-[#4FC3A1]' : 'text-[#C0392B]'}`}>
-              {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}% este mes
+            <p className={`text-xs mt-2 font-medium ${trend.positive ? 'text-emerald-600' : 'text-red-500'}`}>
+              {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}%
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-lg bg-gradient-to-br ${colorMap[color]}`}>
-          <Icon size={24} className="text-white" />
+        <div className={`p-2.5 rounded-xl ${s.icon} flex-shrink-0`}>
+          <Icon size={20} />
         </div>
       </div>
     </div>

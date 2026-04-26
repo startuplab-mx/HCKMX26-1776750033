@@ -8,7 +8,7 @@ export const connectMongoDB = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/centinela';
 
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, { dbName: 'golden' });
     console.log('✅ Conectado a MongoDB');
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error);

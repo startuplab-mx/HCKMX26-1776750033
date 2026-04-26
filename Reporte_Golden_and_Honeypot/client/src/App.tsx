@@ -7,9 +7,9 @@ function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#12243a] to-[#1a2e47]">
+    <div className="min-h-screen bg-[#f5f7fa]">
       <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <main className="pt-16">
+      <main className="pt-14">
         {currentPage === 'dashboard' && <Dashboard />}
       </main>
     </div>

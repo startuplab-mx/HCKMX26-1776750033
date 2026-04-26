@@ -95,3 +95,42 @@ export const TelegramChannel = mongoose.model<ITelegramChannel>(
   'TelegramChannel',
   telegramChannelSchema
 );
+
+interface IBotResult extends Document {
+  alerta_id: string;
+  plataforma: string;
+  cuenta_id: string;
+  cuenta_nombre: string;
+  tipo_evento: string;
+  datos: Record<string, unknown>;
+  scoring: {
+    score_final?: number;
+    risk_level?: string;
+    confidence?: number;
+    confidence_label?: string;
+  };
+  generado_en: string;
+  estado: string;
+}
+
+const botResultSchema = new Schema<IBotResult>(
+  {
+    alerta_id: { type: String, index: true },
+    plataforma: { type: String, index: true },
+    cuenta_id: String,
+    cuenta_nombre: String,
+    tipo_evento: String,
+    datos: { type: Schema.Types.Mixed },
+    scoring: {
+      score_final: Number,
+      risk_level: String,
+      confidence: Number,
+      confidence_label: String,
+    },
+    generado_en: String,
+    estado: String,
+  },
+  { collection: 'bot_results', timestamps: false }
+);
+
+export const BotResult = mongoose.model<IBotResult>('BotResult', botResultSchema);

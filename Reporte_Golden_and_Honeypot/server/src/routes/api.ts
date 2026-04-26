@@ -1,311 +1,135 @@
 import { Express, Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { ContentItem, TelegramChannel } from '../models/schemas';
 
-type SourceName = 'youtube' | 'telegram' | 'tiktok';
+// Campos de fecha candidatos, en orden de preferencia
+const DATE_FIELDS = ['etiquetado_en', 'ultima_actualizacion', 'createTimeISO', 'fecha_publicacion', 'createdAt'];
 
-interface SourceStats {
-  _id: SourceName;
-  count: number;
-  totalViews: number;
-  totalLikes: number;
-}
-
-interface TrendPoint {
-  _id: {
-    source: SourceName;
-    date: string;
-  };
-  count: number;
-  totalViews: number;
-  totalEngagement: number;
-}
-
-const getLegacyStats = async (): Promise<{ totalItems: number; totalChannels: number; itemsBySource: SourceStats[] } | null> => {
+async function getDb() {
   const db = mongoose.connection.db;
-  if (!db) return null;
-
-  const hasYoutube = await db.listCollections({ name: 'youtube_items' }).hasNext();
-  if (!hasYoutube) return null;
-
-  const [youtubeCount, telegramCount, tiktokCount, totalChannels] = await Promise.all([
-    db.collection('youtube_items').countDocuments(),
-    db.collection('telegram_messages').countDocuments(),
-    db.collection('tiktok_videos').countDocuments(),
-    db.collection('telegram_channels').countDocuments(),
-  ]);
-
-  const [youtubeAgg, telegramAgg, tiktokAgg] = await Promise.all([
-    db.collection('youtube_items')
-      .aggregate([{ $group: { _id: null, totalViews: { $sum: { $ifNull: ['$view_count', 0] } }, totalLikes: { $sum: { $ifNull: ['$like_count', 0] } } } }])
-      .toArray(),
-    db.collection('telegram_messages')
-      .aggregate([{ $group: { _id: null, totalViews: { $sum: { $ifNull: ['$views', 0] } } } }])
-      .toArray(),
-    db.collection('tiktok_videos')
-      .aggregate([{ $group: { _id: null, totalViews: { $sum: { $ifNull: ['$stats.vistas', 0] } }, totalLikes: { $sum: { $ifNull: ['$stats.likes', 0] } } } }])
-      .toArray(),
-  ]);
-
-  const itemsBySource: SourceStats[] = [
-    {
-      _id: 'youtube',
-      count: youtubeCount,
-      totalViews: Number(youtubeAgg[0]?.totalViews || 0),
-      totalLikes: Number(youtubeAgg[0]?.totalLikes || 0),
-    },
-    {
-      _id: 'telegram',
-      count: telegramCount,
-      totalViews: Number(telegramAgg[0]?.totalViews || 0),
-      totalLikes: 0,
-    },
-    {
-      _id: 'tiktok',
-      count: tiktokCount,
-      totalViews: Number(tiktokAgg[0]?.totalViews || 0),
-      totalLikes: Number(tiktokAgg[0]?.totalLikes || 0),
-    },
-  ];
-
-  return {
-    totalItems: youtubeCount + telegramCount + tiktokCount,
-    totalChannels,
-    itemsBySource,
-  };
-};
-
-const getLegacyTrends = async (fromDate: Date): Promise<TrendPoint[] | null> => {
-  const db = mongoose.connection.db;
-  if (!db) return null;
-
-  const hasYoutube = await db.listCollections({ name: 'youtube_items' }).hasNext();
-  if (!hasYoutube) return null;
-
-  const [youtube, telegram, tiktok] = await Promise.all([
-    db.collection('youtube_items')
-      .aggregate<TrendPoint>([
-        { $addFields: { parsedDate: { $dateFromString: { dateString: '$published_at', onError: null, onNull: null } } } },
-        { $match: { parsedDate: { $gte: fromDate } } },
-        {
-          $group: {
-            _id: {
-              source: 'youtube',
-              date: { $dateToString: { format: '%Y-%m-%d', date: '$parsedDate' } },
-            },
-            count: { $sum: 1 },
-            totalViews: { $sum: { $ifNull: ['$view_count', 0] } },
-            totalEngagement: { $sum: { $add: [{ $ifNull: ['$like_count', 0] }, { $ifNull: ['$comment_count', 0] }] } },
-          },
-        },
-      ])
-      .toArray(),
-    db.collection('telegram_messages')
-      .aggregate<TrendPoint>([
-        { $addFields: { parsedDate: { $dateFromString: { dateString: '$date', onError: null, onNull: null } } } },
-        { $match: { parsedDate: { $gte: fromDate } } },
-        {
-          $group: {
-            _id: {
-              source: 'telegram',
-              date: { $dateToString: { format: '%Y-%m-%d', date: '$parsedDate' } },
-            },
-            count: { $sum: 1 },
-            totalViews: { $sum: { $ifNull: ['$views', 0] } },
-            totalEngagement: { $sum: { $ifNull: ['$forwards', 0] } },
-          },
-        },
-      ])
-      .toArray(),
-    db.collection('tiktok_videos')
-      .aggregate<TrendPoint>([
-        { $addFields: { parsedDate: { $dateFromString: { dateString: '$fecha_publicacion', onError: null, onNull: null } } } },
-        { $match: { parsedDate: { $gte: fromDate } } },
-        {
-          $group: {
-            _id: {
-              source: 'tiktok',
-              date: { $dateToString: { format: '%Y-%m-%d', date: '$parsedDate' } },
-            },
-            count: { $sum: 1 },
-            totalViews: { $sum: { $ifNull: ['$stats.vistas', 0] } },
-            totalEngagement: {
-              $sum: {
-                $add: [
-                  { $ifNull: ['$stats.likes', 0] },
-                  { $ifNull: ['$stats.comentarios', 0] },
-                  { $ifNull: ['$stats.compartidos', 0] },
-                ],
-              },
-            },
-          },
-        },
-      ])
-      .toArray(),
-  ]);
-
-  return [...youtube, ...telegram, ...tiktok].sort((a, b) => a._id.date.localeCompare(b._id.date));
-};
+  if (!db) throw new Error('DB no conectada');
+  return db;
+}
 
 export const setupRoutes = (app: Express) => {
-  // Obtener estadísticas generales
-  app.get('/api/stats', async (req: Request, res: Response) => {
+  // Estadísticas: lista todas las colecciones de golden y cuenta documentos
+  app.get('/api/stats', async (_req: Request, res: Response) => {
     try {
-      const totalItems = await ContentItem.countDocuments();
-      const itemsBySource = await ContentItem.aggregate([
-        {
-          $group: {
-            _id: '$source',
-            count: { $sum: 1 },
-            totalViews: { $sum: '$engagement.views' },
-            totalLikes: { $sum: '$engagement.likes' },
-          },
-        },
-      ]);
+      const db = await getDb();
+      const colInfos = await db.listCollections().toArray();
 
-      const totalChannels = await TelegramChannel.countDocuments();
+      const colStats = await Promise.all(
+        colInfos.map(async (c) => ({
+          name: c.name,
+          count: await db.collection(c.name).estimatedDocumentCount(),
+        }))
+      );
 
-      // Fallback para la base "centinela" con colecciones legadas separadas por fuente.
-      if (totalItems === 0 && totalChannels === 0) {
-        const legacy = await getLegacyStats();
-        if (legacy) {
-          res.json(legacy);
-          return;
-        }
-      }
+      colStats.sort((a, b) => b.count - a.count);
+
+      const totalItems = colStats.reduce((sum, c) => sum + c.count, 0);
 
       res.json({
         totalItems,
-        totalChannels,
-        itemsBySource,
+        collections: colStats,
+        // Formato compatible con el frontend (itemsBySource)
+        itemsBySource: colStats.map((c) => ({
+          _id: c.name,
+          count: c.count,
+          totalViews: 0,
+          totalLikes: 0,
+        })),
       });
     } catch (error) {
       res.status(500).json({ error: 'Error obteniendo estadísticas' });
     }
   });
 
-  // Obtener contenido por fuente
-  app.get('/api/content/:source', async (req: Request, res: Response) => {
+  // Tendencias: busca el primer campo de fecha disponible en cada colección
+  app.get('/api/trends', async (_req: Request, res: Response) => {
     try {
-      const { source } = req.params;
-      const { limit = 50, skip = 0 } = req.query;
-
-      const items = await ContentItem.find({ source })
-        .limit(Number(limit))
-        .skip(Number(skip))
-        .sort({ createdAt: -1 });
-
-      const total = await ContentItem.countDocuments({ source });
-
-      res.json({
-        items,
-        total,
-        page: Math.floor(Number(skip) / Number(limit)) + 1,
-        pages: Math.ceil(total / Number(limit)),
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Error obteniendo contenido' });
-    }
-  });
-
-  // Obtener tendencias (últimos 30 días)
-  app.get('/api/trends', async (req: Request, res: Response) => {
-    try {
+      const db = await getDb();
+      const colInfos = await db.listCollections().toArray();
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const trends = await ContentItem.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: thirtyDaysAgo },
-          },
-        },
-        {
-          $group: {
-            _id: {
-              source: '$source',
-              date: {
-                $dateToString: {
-                  format: '%Y-%m-%d',
-                  date: '$createdAt',
+      const allTrends: Array<{ _id: { source: string; date: string }; count: number }> = [];
+
+      for (const colInfo of colInfos) {
+        const col = db.collection(colInfo.name);
+
+        // Detectar qué campo de fecha tiene esta colección
+        const sample = await col.findOne({});
+        if (!sample) continue;
+
+        const dateField = DATE_FIELDS.find((f) => sample[f] != null);
+        if (!dateField) continue;
+
+        const trends = await col
+          .aggregate([
+            {
+              $addFields: {
+                _parsedDate: {
+                  $dateFromString: {
+                    dateString: { $toString: `$${dateField}` },
+                    onError: null,
+                    onNull: null,
+                  },
                 },
               },
             },
-            count: { $sum: 1 },
-            totalViews: { $sum: '$engagement.views' },
-            totalEngagement: {
-              $sum: {
-                $add: [
-                  { $ifNull: ['$engagement.likes', 0] },
-                  { $ifNull: ['$engagement.comments', 0] },
-                  { $ifNull: ['$engagement.shares', 0] },
-                ],
+            { $match: { _parsedDate: { $gte: thirtyDaysAgo } } },
+            {
+              $group: {
+                _id: {
+                  source: colInfo.name,
+                  date: { $dateToString: { format: '%Y-%m-%d', date: '$_parsedDate' } },
+                },
+                count: { $sum: 1 },
+                totalViews: { $sum: 0 },
+                totalEngagement: { $sum: 0 },
               },
             },
-          },
-        },
-        {
-          $sort: { '_id.date': 1 },
-        },
-      ]);
+            { $sort: { '_id.date': 1 } },
+          ])
+          .toArray();
 
-      if (trends.length === 0) {
-        const legacy = await getLegacyTrends(thirtyDaysAgo);
-        if (legacy) {
-          res.json(legacy);
-          return;
-        }
+        allTrends.push(...(trends as typeof allTrends));
       }
 
-      res.json(trends);
+      res.json(allTrends);
     } catch (error) {
       res.status(500).json({ error: 'Error obteniendo tendencias' });
     }
   });
 
-  // Obtener canales de Telegram
-  app.get('/api/telegram/channels', async (req: Request, res: Response) => {
+  // Documentos recientes de cualquier colección
+  app.get('/api/recent', async (req: Request, res: Response) => {
     try {
-      const { limit = 50, skip = 0 } = req.query;
+      const db = await getDb();
+      const limit = Number(req.query.limit) || 20;
+      const colInfos = await db.listCollections().toArray();
 
-      const channels = await TelegramChannel.find()
-        .limit(Number(limit))
-        .skip(Number(skip))
-        .sort({ members: -1 });
+      const allDocs: Array<Record<string, unknown>> = [];
 
-      const total = await TelegramChannel.countDocuments();
+      for (const colInfo of colInfos) {
+        const col = db.collection(colInfo.name);
+        const sample = await col.findOne({});
+        if (!sample) continue;
 
-      res.json({
-        channels,
-        total,
-        page: Math.floor(Number(skip) / Number(limit)) + 1,
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Error obteniendo canales' });
-    }
-  });
+        const dateField = DATE_FIELDS.find((f) => sample[f] != null);
+        const sort = dateField ? { [dateField]: -1 as const } : { _id: -1 as const };
 
-  // Buscar contenido por palabras clave
-  app.get('/api/search', async (req: Request, res: Response) => {
-    try {
-      const { q, source } = req.query;
-
-      const query: any = {
-        $or: [
-          { title: { $regex: q, $options: 'i' } },
-          { description: { $regex: q, $options: 'i' } },
-        ],
-      };
-
-      if (source) {
-        query.source = source;
+        const docs = await col.find({}).sort(sort).limit(limit).toArray();
+        docs.forEach((d) => { d['_collection'] = colInfo.name; });
+        allDocs.push(...docs);
       }
 
-      const results = await ContentItem.find(query).limit(100);
+      // Ordenar el combinado por _id descendente (aproximación)
+      allDocs.sort((a, b) => String(b['_id']).localeCompare(String(a['_id'])));
 
-      res.json(results);
+      res.json(allDocs.slice(0, limit));
     } catch (error) {
-      res.status(500).json({ error: 'Error en búsqueda' });
+      res.status(500).json({ error: 'Error obteniendo documentos recientes' });
     }
   });
 };
