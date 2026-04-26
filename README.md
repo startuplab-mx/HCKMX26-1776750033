@@ -155,13 +155,13 @@ Esta seccion documenta las herramientas de IA efectivamente integradas en el cod
 - Medio: apoyo analitico secundario.
 - Bajo: apoyo auxiliar.
 
-### Cobertura operativa de IA por modulo
+### Cobertura de agentes
 
-| Modulo | Uso de IA |
+| Modulo | Tecnologia principal |
 |---|---|
-| Orquestador | IA generativa para toma de decisiones y coordinacion de herramientas |
-| Agente 2 NLP | IA discriminativa zero-shot para clasificacion de riesgo |
-| ETL (Agente 1 y Apis2BD_ETL) | No usa IA generativa para extraer; usa APIs y reglas de scoring |
+| Orquestador | GPT-4o-mini como motor de razonamiento para coordinacion autonoma de tareas |
+| Agente 2 NLP | Clasificacion semantica zero-shot con mDeBERTa multilingue |
+| ETL (Agente 1 y Apis2BD_ETL) | Extraccion directa via APIs publicas + scoring por lexico de riesgo |
 
 ---
 
@@ -252,7 +252,13 @@ Esto levanta backend (Express) y frontend (Vite) en paralelo segun scripts del p
 
 ---
 
-## 9. Integrantes del equipo
+## 9. Uso de herramientas de IA en el desarrollo
+
+Durante el desarrollo del proyecto se utilizaron **ChatGPT** y **Gemini** como asistentes de programación para acelerar la escritura y depuración de código. La arquitectura del sistema, las decisiones técnicas, la integración de fuentes y la lógica de negocio son trabajo propio del equipo.
+
+---
+
+## 10. Integrantes del equipo
 
 <table>
     <tr>
@@ -281,7 +287,7 @@ Esto levanta backend (Express) y frontend (Vite) en paralelo segun scripts del p
 
 ---
 
-## 10. Documentación por módulo
+## 11. Documentación por módulo
 
 | Módulo | README |
 |---|---|
