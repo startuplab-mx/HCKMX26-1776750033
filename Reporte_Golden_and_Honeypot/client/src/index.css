@@ -3,54 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --navy-deep: #1A4971;
-  --navy-core: #1B3A5C;
-  --blue-data: #2E6DA4;
-  --blue-soft: #D5E8F0;
-  --sage: #A8D5BA;
-  --mint: #4FC3A1;
-  --green-core: #1E8449;
-  --green-soft: #D5F5E3;
-  --alert-red: #C0392B;
-  --alert-amber: #E67E22;
-  --text-main: #E5E7EB;
-  --text-muted: #9CA3AF;
-  --surface-1: #0F172A;
-  --surface-2: #12243A;
-  --surface-3: #1A2E47;
-  --border-soft: rgba(213, 232, 240, 0.28);
+  --bg:          #f5f7fa;
+  --surface:     #ffffff;
+  --surface-2:   #f0f4f8;
+  --border:      #e2e8f0;
+  --border-dark: #cbd5e1;
+  --text-main:   #0f172a;
+  --text-sub:    #475569;
+  --text-muted:  #94a3b8;
+  --accent-blue:    #3b82f6;
+  --accent-green:   #10b981;
+  --accent-violet:  #8b5cf6;
+  --accent-orange:  #f59e0b;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: radial-gradient(circle at 20% 15%, #1a2e47 0%, #0f172a 45%, #0c1320 100%);
+  background: var(--bg);
   color: var(--text-main);
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--surface-2);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--navy-core);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--navy-deep);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg); }
+::-webkit-scrollbar-thumb  { background: var(--border-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

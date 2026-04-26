@@ -1,31 +1,16 @@
-/* Transiciones suaves */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Estilos personalizados */
 .card {
-  background: linear-gradient(145deg, rgba(18, 36, 58, 0.9), rgba(15, 23, 42, 0.84));
-  border: 1px solid var(--border-soft);
-  border-radius: 0.75rem;
-  backdrop-filter: blur(10px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .card:hover {
-  border-color: rgba(168, 213, 186, 0.45);
-  box-shadow: 0 8px 24px rgba(26, 73, 113, 0.25);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  transition: box-shadow 0.2s;
 }
 
 .stat-card {
-  background: linear-gradient(135deg, rgba(18, 36, 58, 0.95) 0%, rgba(26, 46, 71, 0.78) 100%);
-  border: 1px solid rgba(46, 109, 164, 0.35);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  background: linear-gradient(135deg, var(--blue-soft) 0%, var(--sage) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
