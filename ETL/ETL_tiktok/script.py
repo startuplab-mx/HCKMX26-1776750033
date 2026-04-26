@@ -23,7 +23,7 @@ from pymongo.errors import BulkWriteError
 
 _SCRIPT_DIR  = Path(__file__).parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent.parent.parent
-load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT.parent.parent / ".env")
 
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))

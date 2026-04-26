@@ -29,7 +29,7 @@ if str(etl_dir) not in sys.path:
 from scoring import full_analysis, channel_analysis
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT.parent.parent / ".env")
 
 logging.basicConfig(
     level=logging.INFO,

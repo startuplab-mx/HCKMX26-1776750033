@@ -28,7 +28,7 @@ from pymongo.errors import BulkWriteError
 ETL_TIKTOK_DIR = Path(__file__).parent
 PROJECT_ROOT   = ETL_TIKTOK_DIR.parent.parent.parent
 
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT.parent.parent / ".env")
 
 if str(ETL_TIKTOK_DIR) not in sys.path:
     sys.path.insert(0, str(ETL_TIKTOK_DIR))
