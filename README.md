@@ -17,11 +17,11 @@
 
 ---
 
-## Descripcion
+## ¿Que es Chimalli?
 
-**404 - Chimalli** es un sistema de mineria operativa para detectar contenido de riesgo en redes sociales. Implementa un pipeline de agentes que extrae datos de YouTube, Telegram y TikTok, los centraliza en MongoDB (capa Bronze), clasifica contenido sospechoso con NLP zero-shot y promueve resultados a una capa Silver para analitica y validacion humana.
+**Chimalli** es una plataforma multiagente de monitoreo de riesgo en redes sociales. Extrae contenido de YouTube, Telegram y TikTok, lo clasifica con NLP zero-shot (capa Silver) y lo presenta a analistas humanos para su validacion y promocion a la capa Gold.
 
-Un orquestador inteligente decide que agente ejecutar segun el estado del sistema, el volumen pendiente y la actividad reciente.
+Un orquestador inteligente coordina autonomamente los agentes de extraccion y clasificacion segun el estado del sistema y el volumen pendiente.
 
 ---
 
@@ -33,16 +33,14 @@ Un orquestador inteligente decide que agente ejecutar segun el estado del sistem
 
 ## Problema que resuelve
 
-La falta de un flujo unificado, auditable y automatizable para vigilar contenido potencialmente peligroso en redes de alta dinamica genera puntos ciegos operativos y tiempos de reaccion elevados.
+La vigilancia manual de contenido en redes sociales es lenta, fragmentada y no escala. Chimalli unifica el flujo con:
 
-**404 resuelve esto con:**
-
-- Extraccion multifuente y repetible desde tres plataformas
-- Motor de priorizacion y clasificacion automatica
-- Arquitectura por capas (Bronze / Silver) que separa dato crudo de dato analizado
-- Interfaces para observabilidad y consumo de resultados
-
-**Impacto esperado:** menor tiempo de reaccion ante picos de actividad, mayor cobertura de fuentes en ventanas cortas y trazabilidad completa de decisiones del sistema.
+| Necesidad | Solucion |
+|---|---|
+| Multiples fuentes a monitorear | Extraccion automatica de YouTube, Telegram y TikTok |
+| Clasificacion subjetiva y lenta | NLP zero-shot multilingue con mDeBERTa |
+| Sin trazabilidad de decisiones | Arquitectura Bronze / Silver / Gold con historial |
+| Validacion humana sin contexto | Interfaz Chimalli con preview de contenido y clasificacion guiada |
 
 ---
 
@@ -50,23 +48,25 @@ La falta de un flujo unificado, auditable y automatizable para vigilar contenido
 
 ```mermaid
 flowchart LR
-    A[Orquestador LLM\nAgentes/orquestador_agentes/orquestador.py] --> B[Agente 1 ETL]
-    A --> C[Agente 2 NLP]
+    A[Orquestador\nGPT-4o-mini] --> B[Agente 1\nETL]
+    A --> C[Agente 2\nNLP]
 
     B --> B1[YouTube ETL]
     B --> B2[Telegram ETL]
     B --> B3[TikTok ETL]
 
-    B1 --> D[(MongoDB Bronze\ncentinela)]
+    B1 --> D[(Bronze\nMongoDB)]
     B2 --> D
     B3 --> D
 
     C --> D
-    C --> E[(MongoDB Silver\nsilver)]
+    C --> E[(Silver\nMongoDB)]
 
-    E --> F[Silver2Gold_UI\nReact + Express]
-    E --> G[Reporte_Golden_and_Honeypot\nDashboard KPIs]
+    E --> F[Silver2Gold_UI\nValidacion humana]
+    E --> G[Dashboard KPIs\nReporte Golden]
 ```
+
+**Flujo resumido:** Extraccion → Bronze → Clasificacion NLP → Silver → Validacion humana → Gold
 
 ---
 
@@ -75,16 +75,127 @@ flowchart LR
 ```text
 404/
 ├── Agentes/
-│   ├── agente1/                  # ETL wrapper
-│   ├── agente2/                  # NLP wrapper + subagentes por fuente
-│   └── orquestador_agentes/      # Decision autonoma con GPT-4o-mini
-├── Apis2BD_ETL/                  # ETL por plataforma (YouTube, Telegram, TikTok)
-├── Reporte_Golden_and_Honeypot/  # Dashboard de monitoreo (TS/React/Express)
-├── Silver2Gold_UI/               # UI de validacion humana (React + Express)
-├── Bot pescador/                 # Scripts de pesca (reservado)
-├── demo_reset.py                 # Reinicio de demo en Bronze/Silver
-└── requirements.txt              # Dependencias Python
+│   ├── agente1/                  # Wrapper ETL: lanza los scripts de extraccion
+│   ├── agente2/                  # Wrapper NLP: clasifica contenido desde Bronze
+│   └── orquestador_agentes/      # Cerebro del sistema: decide que ejecutar y cuando
+├── Apis2BD_ETL/                  # Scripts ETL por plataforma (YouTube, Telegram, TikTok)
+├── Silver2Gold_UI/               # Interfaz web de validacion humana (React + Express)
+├── Reporte_Golden_and_Honeypot/  # Dashboard de KPIs y monitoreo (TS/React/Express)
+├── demo_reset.py                 # Reinicia datos Bronze/Silver para demo controlada
+└── requirements.txt              # Dependencias Python del pipeline
 ```
+
+---
+
+## Instalacion paso a paso
+
+### Paso 1 — Clonar el repositorio
+
+```bash
+git clone https://github.com/AlegreVentura/404.git
+cd 404
+```
+
+### Paso 2 — Crear el archivo de variables de entorno
+
+Crear un archivo `.env` en la raiz del proyecto (`404/`) con las siguientes claves:
+
+```env
+# Base de datos
+MONGODB_URI=mongodb+srv://usuario:password@cluster/base?retryWrites=true&w=majority
+
+# IA
+OPENAI_API_KEY=tu_openai_key
+
+# APIs de extraccion
+YOUTUBE_API_KEY=tu_youtube_key
+TELEGRAM_API_ID=tu_telegram_api_id
+TELEGRAM_API_HASH=tu_telegram_api_hash
+```
+
+> Necesitas una cuenta en [MongoDB Atlas](https://www.mongodb.com/cloud/atlas), [OpenAI](https://platform.openai.com/) y acceso a las APIs de YouTube y Telegram.
+
+### Paso 3 — Instalar dependencias Python
+
+```bash
+pip install -r requirements.txt
+```
+
+Si vas a usar el flujo de TikTok:
+
+```bash
+pip install playwright && playwright install chromium
+```
+
+### Paso 4 — Ejecutar el pipeline
+
+Elige la opcion segun tu necesidad:
+
+**Opcion A — Orquestador completo (recomendado para produccion)**
+> Lanza el sistema completo: decide automaticamente si extraer, clasificar o ambos.
+
+```bash
+python Agentes/orquestador_agentes/orquestador.py
+```
+
+**Opcion B — Solo extraccion ETL (carga datos a Bronze)**
+> Util para poblar la BD sin clasificar aun.
+
+```bash
+python Apis2BD_ETL/main.py          # todas las fuentes
+python Apis2BD_ETL/main.py youtube  # solo YouTube
+python Apis2BD_ETL/main.py telegram # solo Telegram
+```
+
+**Opcion C — Solo clasificacion NLP (procesa Bronze → Silver)**
+> Util si ya tienes datos en Bronze y quieres clasificarlos.
+
+```bash
+python Agentes/agente2/run_agente2.py todos
+python Agentes/agente2/run_agente2.py youtube
+python Agentes/agente2/run_agente2.py telegram
+```
+
+**Opcion D — Reset para demo**
+> Restablece Bronze y Silver a un estado de demo controlado.
+
+```bash
+python demo_reset.py
+```
+
+### Paso 5 — Levantar la interfaz de validacion (Silver2Gold_UI)
+
+```bash
+cd Silver2Gold_UI
+npm install
+npm run start
+```
+
+Esto levanta en paralelo:
+- **Frontend** (React + Vite) → `http://localhost:5173`
+- **Backend** (Express + Mongoose) → `http://localhost:5000`
+
+---
+
+## Modulos con IA
+
+| Modulo | Tecnologia |
+|---|---|
+| Orquestador | GPT-4o-mini — razonamiento autonomo para coordinacion de tareas |
+| Agente 2 NLP | mDeBERTa multilingue — clasificacion zero-shot de contenido en riesgo |
+| ETL | Sin IA generativa — extraccion por APIs + scoring por lexico de riesgo |
+
+<details>
+<summary>Ver detalle tecnico de modelos</summary>
+
+| Herramienta | Modelo | Uso | Archivo |
+|---|---|---|---|
+| OpenAI API | GPT-4o-mini | Decide correr ETL, NLP, ambos o esperar segun estado del sistema | orquestador_agentes/orquestador.py |
+| Hugging Face | zero-shot-classification | Motor de inferencia NLP sobre textos de las tres plataformas | agente2/run_agente2.py |
+| mDeBERTa | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Clasificacion semantica multilingue de contenido sospechoso | agente2/run_agente2.py |
+| PyTorch | cpu / cuda | Ejecucion del modelo con seleccion automatica de dispositivo | agente2/run_agente2.py |
+
+</details>
 
 ---
 
@@ -94,95 +205,8 @@ flowchart LR
 |---|---|
 | Pipeline / Backend | Python 3.12+, MongoDB, PyMongo, python-dotenv, tqdm |
 | Extraccion | YouTube Data API v3, Telegram via Telethon, TikTok Scraper |
-| Modelos | OpenAI GPT-4o-mini, mDeBERTa-v3-base-mnli-xnli (zero-shot), PyTorch |
+| Modelos | OpenAI GPT-4o-mini, mDeBERTa-v3-base-mnli-xnli, PyTorch |
 | Frontend | React, Vite, Express, Mongoose |
-
----
-
-## Modulos con IA integrada
-
-| Modulo | Tecnologia principal |
-|---|---|
-| Orquestador | GPT-4o-mini como motor de razonamiento para coordinacion autonoma de tareas |
-| Agente 2 NLP | Clasificacion semantica zero-shot con mDeBERTa multilingue |
-| ETL (Agente 1 y Apis2BD_ETL) | Extraccion directa via APIs publicas + scoring por lexico de riesgo |
-
-<details>
-<summary>Ver detalle de herramientas IA integradas</summary>
-
-| Herramienta | Modelo | Uso | Modulo |
-|---|---|---|---|
-| OpenAI API | GPT-4o-mini | Razonamiento del orquestador: decide correr ETL, NLP, ambos o esperar | orquestador_agentes/orquestador.py |
-| Hugging Face | zero-shot-classification | Motor de inferencia NLP para clasificar riesgo en textos | agente2/run_agente2.py |
-| mDeBERTa | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Clasificacion semantica multilingue de contenido sospechoso | agente2/run_agente2.py |
-| PyTorch | cpu / cuda | Ejecucion del modelo NLP con seleccion automatica de dispositivo | agente2/run_agente2.py |
-
-</details>
-
----
-
-## Instalacion y ejecucion
-
-### Prerrequisitos
-
-- Python 3.12+
-- Node.js 18+
-- MongoDB Atlas o local
-- Credenciales API: YouTube, Telegram y OpenAI
-
-### Variables de entorno
-
-Crear `.env` en la raiz de `404/`:
-
-```env
-MONGODB_URI=mongodb+srv://usuario:password@cluster/base?retryWrites=true&w=majority
-OPENAI_API_KEY=tu_openai_key
-YOUTUBE_API_KEY=tu_youtube_key
-TELEGRAM_API_ID=tu_telegram_api_id
-TELEGRAM_API_HASH=tu_telegram_api_hash
-```
-
-### Dependencias Python
-
-```bash
-pip install -r requirements.txt
-pip install pymongo python-dotenv openai transformers torch telethon google-api-python-client tqdm
-```
-
-Para el flujo TikTok:
-
-```bash
-pip install playwright && playwright install chromium
-```
-
-### Opciones de ejecucion
-
-```bash
-# Opcion A — Orquestador completo (recomendado)
-python Agentes/orquestador_agentes/orquestador.py
-
-# Opcion B — ETL directo por fuente
-python Apis2BD_ETL/main.py
-python Apis2BD_ETL/main.py youtube
-python Apis2BD_ETL/main.py telegram
-
-# Opcion C — NLP directo sobre Bronze
-python Agentes/agente2/run_agente2.py todos
-python Agentes/agente2/run_agente2.py youtube
-
-# Opcion D — Reset rapido para demo
-python demo_reset.py
-```
-
-### Interfaz web (Silver2Gold_UI)
-
-```bash
-cd Silver2Gold_UI
-npm install
-npm run start
-```
-
-Levanta el backend (Express, puerto 5000) y el frontend (Vite, puerto 5173) en paralelo.
 
 ---
 
@@ -190,17 +214,17 @@ Levanta el backend (Express, puerto 5000) y el frontend (Vite, puerto 5173) en p
 
 - El orquestador soporta ciclos autonomos con reporte en base de conocimiento.
 - El ETL de TikTok puede requerir ajustes de scraping ante cambios de plataforma.
-- TikTok ETL esta deshabilitado temporalmente en ejecucion automatica del orquestador.
+- TikTok ETL esta deshabilitado temporalmente en la ejecucion automatica del orquestador.
 
 ---
 
 ## Documentacion por modulo
 
-| Modulo | Enlace |
+| Modulo | README |
 |---|---|
 | Agentes (ETL, NLP, Orquestador) | [Agentes/README.md](Agentes/README.md) |
-| Dashboard de monitoreo (KPIs) | [Reporte_Golden_and_Honeypot/README.md](Reporte_Golden_and_Honeypot/README.md) |
-| UI de etiquetado Silver → Golden | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
+| Dashboard de KPIs | [Reporte_Golden_and_Honeypot/README.md](Reporte_Golden_and_Honeypot/README.md) |
+| UI de validacion Silver → Gold | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
 
 ---
 
