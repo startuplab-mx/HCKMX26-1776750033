@@ -7,7 +7,6 @@ test_data/
 *.jpeg
 *.mp3
 *.mp4
-*.json
 *.txt
 test_folder/
 **toast.py
@@ -18,5 +17,8 @@ data/
 *.session
 *.session-journal
 README_agentes.md
-demo_reset.py
+*.json
+!json_holdout_prueba.json
+!**/package.json
+
 
