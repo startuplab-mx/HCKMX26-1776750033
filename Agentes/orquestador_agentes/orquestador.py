@@ -363,120 +363,266 @@ class _GuiWriter:
 
 
 class _OrchestratorGUI:
-    BG      = "#0d1117"
-    TEXT_BG = "#161b22"
-    FG      = "#c9d1d9"
-    ACCENT  = "#21262d"
-    CYAN    = "#58a6ff"
-    GREEN   = "#3fb950"
-    YELLOW  = "#d29922"
-    RED     = "#f85149"
-    ORANGE  = "#e3b341"
+    # Paleta principal
+    NAVY     = "#0a2240"
+    NAVY2    = "#0d2d55"
+    NAVYLT   = "#163660"
+    WHITE    = "#ffffff"
+    OFFWHITE = "#f4f7fb"
+    TEXT     = "#1a2744"
+    BLUE     = "#1e5fa8"
+    BLUELIT  = "#2e7dd1"
+    GREEN    = "#0a7c3e"
+    RED      = "#b92d2d"
+    ORANGE   = "#c25c10"
+    GRAY     = "#7a8fa6"
+    GOLD     = "#8a6d00"
+    SEPLINE  = "#d5e1ef"
+
+    # Dot animation states
+    _DOT_IDLE   = ("#4a9eff", 800)   # color, delay ms
+    _DOT_ACTIVE = ("#00e676", 180)
 
     def __init__(self, log_q: queue.Queue, user_q: queue.Queue, wake_event: threading.Event):
-        self.log_q      = log_q
-        self.user_q     = user_q
-        self.wake_event = wake_event
+        self.log_q       = log_q
+        self.user_q      = user_q
+        self.wake_event  = wake_event
+        self._active     = False
+        self._pulse_r    = 5
+        self._pulse_dir  = -1
+        self._spin_angle = 0
 
         self.root = tk.Tk()
-        self.root.title("Centinela — Orquestador")
-        self.root.configure(bg=self.BG)
-        self.root.geometry("860x580")
+        self.root.title("Centinela — Orquestador Inteligente")
+        self.root.configure(bg=self.NAVY)
+        self.root.geometry("920x640")
+        self.root.minsize(700, 480)
         self.root.resizable(True, True)
 
+        # icono de ventana (canvas pequeño como ícono)
+        try:
+            ico = tk.PhotoImage(width=16, height=16)
+            ico.put(self.NAVY, to=(0, 0, 15, 15))
+            self.root.iconphoto(True, ico)
+        except Exception:
+            pass
+
         self._build_ui()
+        self._animate_dot()
         self._poll_log()
 
-    def _build_ui(self):
-        hdr = tk.Frame(self.root, bg=self.ACCENT, pady=10, padx=14)
-        hdr.pack(fill="x")
-        tk.Label(hdr, text="CENTINELA  ·  Orquestador Inteligente",
-                 bg=self.ACCENT, fg=self.CYAN,
-                 font=("Segoe UI", 13, "bold")).pack(side="left")
-        self._status_lbl = tk.Label(hdr, text="iniciando...",
-                                    bg=self.ACCENT, fg=self.YELLOW,
-                                    font=("Segoe UI", 10))
-        self._status_lbl.pack(side="right")
+    # ── construcción UI ───────────────────────────────────────────────
 
-        log_frame = tk.Frame(self.root, bg=self.BG, padx=10, pady=8)
-        log_frame.pack(fill="both", expand=True)
+    def _build_ui(self):
+        # ── HEADER ──
+        hdr = tk.Frame(self.root, bg=self.NAVY, pady=0)
+        hdr.pack(fill="x")
+
+        # barra de color superior fina
+        tk.Frame(hdr, bg=self.BLUELIT, height=3).pack(fill="x")
+
+        inner_hdr = tk.Frame(hdr, bg=self.NAVY, padx=18, pady=12)
+        inner_hdr.pack(fill="x")
+
+        # logo / título
+        left = tk.Frame(inner_hdr, bg=self.NAVY)
+        left.pack(side="left")
+
+        tk.Label(left, text="CENTINELA",
+                 bg=self.NAVY, fg=self.WHITE,
+                 font=("Segoe UI", 16, "bold")).pack(side="left")
+        tk.Label(left, text="  ·  Orquestador Inteligente",
+                 bg=self.NAVY, fg=self.BLUELIT,
+                 font=("Segoe UI", 12)).pack(side="left")
+
+        # status (dot + texto) a la derecha
+        right = tk.Frame(inner_hdr, bg=self.NAVY)
+        right.pack(side="right")
+
+        self._dot_cv = tk.Canvas(right, width=14, height=14,
+                                 bg=self.NAVY, highlightthickness=0)
+        self._dot_cv.pack(side="left", padx=(0, 7))
+        self._dot_oval = self._dot_cv.create_oval(2, 2, 12, 12,
+                                                  fill="#4a9eff", outline="")
+
+        self._status_var = tk.StringVar(value="iniciando…")
+        self._status_lbl = tk.Label(right, textvariable=self._status_var,
+                                    bg=self.NAVY, fg=self.BLUELIT,
+                                    font=("Segoe UI", 10))
+        self._status_lbl.pack(side="left")
+
+        # separador decorativo
+        tk.Frame(self.root, bg=self.NAVYLT, height=1).pack(fill="x")
+
+        # ── LOG AREA (fondo blanco) ──
+        log_outer = tk.Frame(self.root, bg=self.WHITE, padx=0, pady=0)
+        log_outer.pack(fill="both", expand=True)
+
+        # barra lateral izquierda de color
+        tk.Frame(log_outer, bg=self.NAVY2, width=5).pack(side="left", fill="y")
+
+        log_inner = tk.Frame(log_outer, bg=self.WHITE, padx=12, pady=10)
+        log_inner.pack(fill="both", expand=True)
 
         self.log_area = scrolledtext.ScrolledText(
-            log_frame, bg=self.TEXT_BG, fg=self.FG,
+            log_inner, bg=self.WHITE, fg=self.TEXT,
             font=("Consolas", 10), wrap=tk.WORD,
             state="disabled", relief="flat", bd=0,
-            insertbackground=self.FG)
+            selectbackground=self.BLUELIT, selectforeground=self.WHITE,
+            spacing3=2)
         self.log_area.pack(fill="both", expand=True)
 
-        self.log_area.tag_configure("action",  foreground=self.CYAN)
-        self.log_area.tag_configure("ok",      foreground=self.GREEN)
-        self.log_area.tag_configure("warn",    foreground=self.RED)
-        self.log_area.tag_configure("sep",     foreground="#444c56")
-        self.log_area.tag_configure("user",    foreground=self.ORANGE)
+        # tags de color sobre fondo blanco
+        self.log_area.tag_configure("ts",     foreground=self.GRAY,
+                                              font=("Consolas", 9))
+        self.log_area.tag_configure("sep",    foreground=self.SEPLINE,
+                                              font=("Consolas", 9))
+        self.log_area.tag_configure("action", foreground=self.NAVY,
+                                              font=("Consolas", 10, "bold"))
+        self.log_area.tag_configure("ok",     foreground=self.GREEN,
+                                              font=("Consolas", 10, "bold"))
+        self.log_area.tag_configure("warn",   foreground=self.RED)
+        self.log_area.tag_configure("info",   foreground=self.BLUE)
+        self.log_area.tag_configure("user",   foreground=self.ORANGE,
+                                              font=("Consolas", 10, "bold italic"))
+        self.log_area.tag_configure("data",   foreground="#555e6a")
 
-        chat_frame = tk.Frame(self.root, bg=self.ACCENT, padx=10, pady=8)
-        chat_frame.pack(fill="x")
+        # ── separador antes del chat ──
+        tk.Frame(self.root, bg=self.NAVYLT, height=1).pack(fill="x")
 
-        tk.Label(chat_frame, text="Mensaje al orquestador:",
-                 bg=self.ACCENT, fg=self.FG,
-                 font=("Segoe UI", 9)).pack(anchor="w")
+        # ── CHAT FOOTER ──
+        footer = tk.Frame(self.root, bg=self.NAVY2, padx=16, pady=12)
+        footer.pack(fill="x")
 
-        inp_row = tk.Frame(chat_frame, bg=self.ACCENT)
-        inp_row.pack(fill="x", pady=(4, 0))
+        lbl_row = tk.Frame(footer, bg=self.NAVY2)
+        lbl_row.pack(fill="x", pady=(0, 6))
+
+        tk.Label(lbl_row, text="Mensaje al orquestador",
+                 bg=self.NAVY2, fg=self.BLUELIT,
+                 font=("Segoe UI", 9, "bold")).pack(side="left")
+        tk.Label(lbl_row,
+                 text="  (el agente entiende instrucciones en lenguaje natural)",
+                 bg=self.NAVY2, fg=self.GRAY,
+                 font=("Segoe UI", 8)).pack(side="left")
+
+        inp_row = tk.Frame(footer, bg=self.NAVY2)
+        inp_row.pack(fill="x")
+
+        # campo de texto con borde simulado
+        entry_wrap = tk.Frame(inp_row, bg=self.BLUELIT, padx=1, pady=1)
+        entry_wrap.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
         self.chat_input = tk.Entry(
-            inp_row, bg=self.TEXT_BG, fg=self.FG,
-            insertbackground=self.FG,
-            font=("Segoe UI", 11), relief="flat", bd=6)
-        self.chat_input.pack(side="left", fill="x", expand=True, padx=(0, 8))
+            entry_wrap, bg=self.WHITE, fg=self.TEXT,
+            insertbackground=self.NAVY,
+            font=("Segoe UI", 11), relief="flat", bd=8)
+        self.chat_input.pack(fill="x")
         self.chat_input.bind("<Return>", self._send)
+        self.chat_input.bind("<FocusIn>",  lambda e: entry_wrap.config(bg=self.BLUELIT))
+        self.chat_input.bind("<FocusOut>", lambda e: entry_wrap.config(bg=self.NAVYLT))
 
-        tk.Button(inp_row, text="Enviar",
-                  bg=self.CYAN, fg=self.BG,
-                  font=("Segoe UI", 10, "bold"),
-                  relief="flat", padx=14, pady=5,
-                  cursor="hand2",
-                  command=self._send).pack(side="right")
+        self._send_btn = tk.Button(
+            inp_row, text="Enviar  →",
+            bg=self.BLUELIT, fg=self.WHITE,
+            activebackground=self.BLUE, activeforeground=self.WHITE,
+            font=("Segoe UI", 10, "bold"),
+            relief="flat", padx=18, pady=8,
+            cursor="hand2",
+            command=self._send)
+        self._send_btn.pack(side="right")
+        self._send_btn.bind("<Enter>", lambda e: self._send_btn.config(bg=self.BLUE))
+        self._send_btn.bind("<Leave>", lambda e: self._send_btn.config(bg=self.BLUELIT))
+
+        # pie
+        tk.Frame(self.root, bg=self.NAVY, height=4).pack(fill="x")
+
+    # ── lógica de animación ───────────────────────────────────────────
+
+    def _animate_dot(self):
+        color, delay = self._DOT_ACTIVE if self._active else self._DOT_IDLE
+        self._pulse_r += self._pulse_dir
+        if self._pulse_r <= 3:
+            self._pulse_dir = 1
+        elif self._pulse_r >= 6:
+            self._pulse_dir = -1
+        r = self._pulse_r
+        cx = 7
+        self._dot_cv.coords(self._dot_oval, cx - r, cx - r, cx + r, cx + r)
+        self._dot_cv.itemconfig(self._dot_oval, fill=color)
+        self.root.after(delay, self._animate_dot)
+
+    def _set_active(self, active: bool, status_text: str = ""):
+        self._active = active
+        if status_text:
+            self._status_var.set(status_text)
+        color = self.GREEN if active else self.BLUELIT
+        self._status_lbl.config(fg=color)
+
+    # ── envío de mensajes ─────────────────────────────────────────────
 
     def _send(self, _event=None):
         msg = self.chat_input.get().strip()
         if not msg:
             return
         self.chat_input.delete(0, tk.END)
-        self._append(f"[Operador] {msg}\n", "user")
+        ts = datetime.now().strftime("%H:%M:%S")
+        self._append(f"{ts}  ", "ts")
+        self._append(f"[Tú] {msg}\n", "user")
         self.user_q.put(msg)
         self.wake_event.set()
+        self._set_active(True, "procesando mensaje…")
+
+    # ── log ───────────────────────────────────────────────────────────
 
     def _append(self, text: str, tag: str = ""):
         self.log_area.config(state="normal")
-        self.log_area.insert(tk.END, text, tag if tag else ())
+        self.log_area.insert(tk.END, text, (tag,) if tag else ())
         self.log_area.see(tk.END)
         self.log_area.config(state="disabled")
 
     def _tag_for(self, line: str) -> str:
-        l = line.lower()
-        if any(c in line for c in ("═", "─", "──")):
+        lo = line.lower().strip()
+        if any(c in line for c in ("═══", "───")):
             return "sep"
-        if "▸" in line or "lanzando" in l or "consultando" in l:
+        if "▸" in line:
             return "action"
-        if any(w in l for w in ("finalizado", "completado", "exitoso", "guardado")):
+        if any(w in lo for w in ("finalizado", "completado", "exitoso", "guardado")):
             return "ok"
-        if any(w in l for w in ("error", "fallo", "⚠")):
+        if any(w in lo for w in ("error", "fallo")):
             return "warn"
+        if any(w in lo for w in ("orquestador ·", "nlp ·", "etl ·")):
+            return "info"
+        if any(w in lo for w in ("sospechosos", "pendientes", "silver", "bronze")):
+            return "data"
         return ""
 
     def _poll_log(self):
         while not self.log_q.empty():
             line = self.log_q.get_nowait()
             tag  = self._tag_for(line)
-            self._append(line, tag)
+            ts   = datetime.now().strftime("%H:%M:%S")
+
+            # no agregar timestamp a separadores o líneas vacías
+            if tag not in ("sep", "") or "═" in line or "─" in line:
+                self._append(f"{ts}  ", "ts")
+            else:
+                self._append(f"{ts}  ", "ts")
+
+            self._append(line if line.endswith("\n") else line + "\n", tag)
+
+            # actualizar status bar
             if "▸" in line:
-                self._status_lbl.config(text=line.replace("▸", "").strip())
+                label = line.replace("▸", "").strip()
+                self._set_active(True, label)
             elif "próxima revisión" in line.lower():
-                self._status_lbl.config(text=line.strip(), fg=self.YELLOW)
+                h = line.strip()
+                self._set_active(False, h)
             elif "finalizado" in line.lower():
-                self._status_lbl.config(text="en espera", fg=self.GREEN)
-        self.root.after(120, self._poll_log)
+                self._set_active(False, "en espera")
+            elif "iniciando" in line.lower() or "cargando" in line.lower():
+                self._set_active(True, "cargando…")
+
+        self.root.after(100, self._poll_log)
 
     def run(self):
         self.root.mainloop()
