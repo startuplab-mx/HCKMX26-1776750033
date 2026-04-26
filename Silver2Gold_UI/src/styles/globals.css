@@ -1,0 +1,84 @@
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #1f2937;
+  background: #dfe9f2;
+  --app-surface-bg:
+    radial-gradient(circle at 12% 8%, #f9fcff 0%, #edf5fb 34%, #d9e7f3 100%);
+  --app-glow-a: radial-gradient(circle at 18% 20%, rgba(74, 173, 255, 0.2) 0%, rgba(74, 173, 255, 0) 44%);
+  --app-glow-b: radial-gradient(circle at 84% 16%, rgba(79, 195, 161, 0.22) 0%, rgba(79, 195, 161, 0) 46%);
+  --app-glow-c: radial-gradient(circle at 74% 78%, rgba(26, 73, 113, 0.17) 0%, rgba(26, 73, 113, 0) 48%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  background: var(--app-surface-bg);
+  background-image:
+    var(--app-surface-bg),
+    var(--app-glow-a),
+    var(--app-glow-b),
+    var(--app-glow-c),
+    linear-gradient(rgba(26, 73, 113, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 73, 113, 0.11) 1px, transparent 1px),
+    linear-gradient(rgba(13, 94, 143, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 94, 143, 0.15) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, 24px 24px, 24px 24px, 96px 96px, 96px 96px;
+  background-position: center;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 116px;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--app-surface-bg);
+  mask-image: linear-gradient(to bottom, #000 76%, transparent 100%);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: -10% -12%;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.66;
+  background:
+    radial-gradient(circle at 14% 22%, rgba(75, 181, 255, 0.26) 0%, rgba(75, 181, 255, 0) 35%),
+    radial-gradient(circle at 86% 14%, rgba(79, 195, 161, 0.24) 0%, rgba(79, 195, 161, 0) 37%),
+    radial-gradient(circle at 76% 86%, rgba(42, 116, 170, 0.2) 0%, rgba(42, 116, 170, 0) 39%);
+  filter: blur(24px) saturate(1.08);
+  animation: appBackgroundFlow 18s ease-in-out infinite alternate;
+}
+
+#root {
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes appBackgroundFlow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-1.5%, 1.2%, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(1.3%, -1%, 0) scale(1.01);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
+}
