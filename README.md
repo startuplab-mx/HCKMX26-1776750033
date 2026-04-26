@@ -49,29 +49,32 @@ El pipeline completo va de la extracción automática a la decisión humana info
 ## Arquitectura
 
 ```mermaid
-flowchart LR
-    A[Orquestador\nGPT-4o-mini] --> B[Agente 1\nETL]
-    A --> C[Agente 2\nNLP]
-    A --> P[Bot Pescador\nInfiltración en tiempo real]
+flowchart TD
+    OP([Operador]) --> O
 
-    B --> B1[YouTube ETL]
-    B --> B2[Telegram ETL]
-    B --> B3[TikTok ETL]
+    O[Orquestador\nGPT-4o-mini\nDecide qué ejecutar y cuándo] --> A1
+    O --> A2
 
-    P --> B2
+    A1[Agente 1 — ETL\nDescarga publicaciones\ny mensajes sospechosos] --> YT[YouTube ETL]
+    A1 --> TG[Telegram ETL]
 
-    B1 --> D[(Bronze\nMongoDB)]
-    B2 --> D
-    B3 --> D
+    BP([Bot Pescador\nVigilancia en tiempo real\nindependiente]) --> BR
 
-    C --> D
-    C --> E[(Silver\nMongoDB)]
+    YT --> BR[(Bronze\ncentinela\nDato crudo)]
+    TG --> BR
 
-    E --> F[Silver2Gold_UI\nValidación humana]
-    E --> G[Dashboard KPIs\nReporte Golden]
+    BR --> A2[Agente 2 — NLP\nmDeBERTa zero-shot\nNarcocultura · Oferta · Reclutamiento]
+
+    A2 -->|solo sospechosos| SL[(Silver\nDato clasificado)]
+
+    SL --> UI[Silver2Gold UI\nValidación humana\nguiada por IA]
+    SL --> DS[Dashboard KPIs\nReporte Golden]
+
+    UI -->|confirmados| GD[(Gold\nObjetivos confirmados)]
+    GD --> DM([Demo Monitor\nVigilancia continua\nsobre Golden])
 ```
 
-**Flujo:** Vigilancia / Infiltración → Bronze → Clasificación NLP → Silver → Validación humana → Gold
+**Flujo:** Extracción / Infiltración → Bronze → Clasificación NLP → Silver → Validación humana → Gold → Monitoreo continuo
 
 ---
 
