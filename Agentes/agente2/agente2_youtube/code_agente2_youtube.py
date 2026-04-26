@@ -33,7 +33,7 @@ silver_col = client["silver"]["youtube_items"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este comentario de YouTube es sobre {}."
-UMBRAL          = 0.49
+UMBRAL          = 0.43
 BATCH_SIZE      = 32
 MAX_COMMENTS    = 50
 MAX_TEXTO_CHARS = 500
@@ -147,9 +147,8 @@ def ejecutar_filtro_youtube(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {"comments.0": {"$exists": True},
-              "_id":         {"$nin": list(ya_en_silver)}}
-    total = bronze_col.count_documents(filtro)
+    filtro       = {"comments.0": {"$exists": True}}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
     print(f"  YouTube  ·  {total} videos pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
@@ -159,7 +158,11 @@ def ejecutar_filtro_youtube(clf=None):
     ops         = []
     sospechosos = 0
 
-    for i, doc in enumerate(bronze_col.find(filtro), 1):
+    procesados = 0
+    for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
+        procesados += 1
         try:
             result = _analizar_video(clf, doc)
         except Exception as e:
@@ -171,7 +174,7 @@ def ejecutar_filtro_youtube(clf=None):
             ops.append(op)
             sospechosos += 1
             vid = str(doc.get("video_id", doc["_id"]))[:22]
-            print(f"  [{i:>4}/{total}]  {vid:<22}  {cat:<33}  {nivel:<6}  {score:.4f}"
+            print(f"  [{procesados:>4}/{total}]  {vid:<22}  {cat:<33}  {nivel:<6}  {score:.4f}"
                   f"  ({n_sosp}/{n_total} cmts)")
 
         if len(ops) >= WRITE_BATCH:

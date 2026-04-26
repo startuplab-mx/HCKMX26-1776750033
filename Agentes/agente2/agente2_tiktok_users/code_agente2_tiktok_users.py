@@ -34,7 +34,7 @@ silver_col = client["silver"]["tiktok_usuarios"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este perfil de TikTok es sobre {}."
-UMBRAL          = 0.49
+UMBRAL          = 0.43
 BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
 MIN_TEXTO_CHARS = 5
@@ -110,12 +110,10 @@ def ejecutar_filtro_tiktok_users(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {
+    filtro       = {
         "$or": [{"bio":    {"$exists": True, "$nin": ["", None]}},
-                {"nombre": {"$exists": True, "$nin": ["", None]}}],
-        "_id": {"$nin": list(ya_en_silver)},
-    }
-    total = bronze_col.count_documents(filtro)
+                {"nombre": {"$exists": True, "$nin": ["", None]}}]}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
     print(f"  TikTok Users  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
@@ -140,6 +138,8 @@ def ejecutar_filtro_tiktok_users(clf=None):
             print(f"  {user:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
         texto = _texto_perfil(doc)
         if len(texto) < MIN_TEXTO_CHARS:
             continue

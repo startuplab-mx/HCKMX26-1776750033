@@ -33,7 +33,7 @@ silver_col = client["silver"]["tiktok_videos"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este video de TikTok es sobre {}."
-UMBRAL          = 0.50
+UMBRAL          = 0.43
 BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
 MIN_TEXTO_CHARS = 5
@@ -99,11 +99,10 @@ def ejecutar_filtro_tiktok_videos(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {
+    filtro       = {
         "$or": [{"descripcion": {"$exists": True, "$nin": ["", None]}},
-                {"hashtags":    {"$exists": True, "$ne": []}}],
-        "_id": {"$nin": list(ya_en_silver)}}
-    total = bronze_col.count_documents(filtro)
+                {"hashtags":    {"$exists": True, "$ne": []}}]}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
     print(f"  TikTok Videos  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
@@ -128,6 +127,8 @@ def ejecutar_filtro_tiktok_videos(clf=None):
             print(f"  {vid:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
         texto = _texto_video(doc)
         if len(texto) < MIN_TEXTO_CHARS:
             continue

@@ -34,7 +34,7 @@ silver_col = client["silver"]["telegram_messages"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este mensaje de Telegram es sobre {}."
-UMBRAL          = 0.49
+UMBRAL          = 0.43
 BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
 MIN_TEXTO_CHARS = 10
@@ -110,9 +110,8 @@ def ejecutar_filtro_telegram_messages(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {"text": {"$exists": True, "$nin": ["", None]},
-              "_id":  {"$nin": list(ya_en_silver)}}
-    total = bronze_col.count_documents(filtro)
+    filtro       = {"text": {"$exists": True, "$nin": ["", None]}}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
     print(f"  Telegram Messages  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
@@ -137,6 +136,8 @@ def ejecutar_filtro_telegram_messages(clf=None):
             print(f"  {msg_id:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
         texto = str(doc.get("text", "")).strip()[:MAX_TEXTO_CHARS]
         if len(texto) < MIN_TEXTO_CHARS:
             continue

@@ -33,7 +33,7 @@ silver_col = client["silver"]["telegram_channels"]
 ETIQUETAS       = ["Reclutamiento", "Oferta de Riesgo", "Narcocultura",
                    "Contenido Inapropiado para Menores", "Seguro"]
 TEMPLATE        = "Este canal de Telegram es sobre {}."
-UMBRAL          = 0.49
+UMBRAL          = 0.43
 BATCH_SIZE      = 32
 MAX_TEXTO_CHARS = 500
 MIN_TEXTO_CHARS = 5
@@ -101,9 +101,8 @@ def ejecutar_filtro_telegram_channels(clf=None):
                        device=device)
 
     ya_en_silver = set(silver_col.distinct("_id"))
-    filtro = {"title": {"$exists": True, "$nin": ["", None]},
-              "_id":   {"$nin": list(ya_en_silver)}}
-    total = bronze_col.count_documents(filtro)
+    filtro       = {"title": {"$exists": True, "$nin": ["", None]}}
+    total        = max(0, bronze_col.count_documents(filtro) - len(ya_en_silver))
     print(f"  Telegram Channels  ·  {total} pendientes  ·  {len(ya_en_silver)} ya en Silver\n")
 
     if total == 0:
@@ -128,6 +127,8 @@ def ejecutar_filtro_telegram_channels(clf=None):
             print(f"  {titulo:<22}  {top_label:<33}  {_nivel(top_score):<6}  {top_score:.4f}")
 
     for doc in bronze_col.find(filtro):
+        if doc["_id"] in ya_en_silver:
+            continue
         texto = _texto_canal(doc)
         if len(texto) < MIN_TEXTO_CHARS:
             continue
