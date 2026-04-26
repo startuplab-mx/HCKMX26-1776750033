@@ -17,4 +17,5 @@ data/
 *.pyc
 *.session
 *.session-journal
+README_agentes.md
 
