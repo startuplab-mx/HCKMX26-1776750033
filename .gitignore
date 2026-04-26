@@ -18,4 +18,5 @@ data/
 *.session
 *.session-journal
 README_agentes.md
+demo_reset.py
 
