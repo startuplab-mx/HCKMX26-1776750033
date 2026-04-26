@@ -48,6 +48,7 @@ const PLATFORM_CONFIG = [
     collectionCandidates: [
       'tiktok_videos',
       'tiktok_usuarios',
+      'tiktok_users', // variante alternativa
       // rollback opcional: 'tiktok_videos_ORC',
       // rollback opcional: 'tiktok_usuarios_ORC',
     ],
@@ -83,6 +84,7 @@ function getTiktokCollectionByContentType(database, contentType) {
   if (contentType === TIKTOK_CONTENT_TYPES.USERS) {
     return getAvailableCollectionByCandidates(database, [
       'tiktok_usuarios',
+      'tiktok_users',
       // rollback opcional: 'tiktok_usuarios_ORC',
     ])
   }
@@ -964,7 +966,7 @@ function HomePage({ currentUser = 'Asharet' }) {
                   : normalizedItems.length === 0
                     ? 'No hay documentos para mostrar'
                     : 'No hay más mensajes disponibles por ahora'
-                : 'TikTok estará disponible cuando exista tiktok_videos o tiktok_usuarios'}
+                : 'TikTok estará disponible cuando exista tiktok_videos y tiktok_usuarios/tiktok_users'}
             </div>
           )}
 
