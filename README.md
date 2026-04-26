@@ -31,7 +31,7 @@ El pipeline completo va de la extracción automática a la decisión humana info
 
 > [Ver demo en video](AQUI_PEGA_TU_LINK_DE_VIDEO)
 
-> [📁 Carpeta del proyecto (Drive)](https://drive.google.com/drive/folders/1it1OJgNVbram578OwhpguPdqRCIaHNTk?usp=sharing)
+> [Ver demo en Drive](https://drive.google.com/drive/folders/1it1OJgNVbram578OwhpguPdqRCIaHNTk?usp=sharing)
 
 ---
 
