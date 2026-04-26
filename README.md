@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=240&section=header&text=404%20%7C%20Chimalli&fontSize=46&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Pipeline%20Multiagente%20de%20Monitoreo%20y%20Deteccion%20de%20Riesgo%20en%20Redes%20Sociales&descAlignY=58&descSize=15" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=240&section=header&text=404%20%7C%20Chimalli&fontSize=46&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Plataforma+de+Inteligencia+Operativa+contra+Reclutamiento+Criminal+en+Redes+Sociales&descAlignY=58&descSize=15" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=2800&pause=900&color=1F8BFF&center=true&vCenter=true&random=false&width=980&lines=Extraccion+continua+de+YouTube%2C+Telegram+y+TikTok;Orquestacion+autonoma+con+LLM+y+agentes+especializados;Clasificacion+NLP+zero-shot+multilingue+con+mDeBERTa;Pipeline+Bronze+to+Silver+para+analitica+y+visualizacion)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=2800&pause=900&color=1F8BFF&center=true&vCenter=true&random=false&width=980&lines=Vigilancia+autonoma+en+YouTube%2C+Telegram+y+TikTok;Bot+infiltrado+en+canales+y+perfiles+sospechosos+en+tiempo+real;Clasificacion+NLP+zero-shot+multilingue+con+mDeBERTa;Validacion+humana+guiada+para+decision+operativa)](https://git.io/typing-svg)
 
 <br/>
 
@@ -19,9 +19,11 @@
 
 ## ¿Que es Chimalli?
 
-**Chimalli** es una plataforma multiagente de monitoreo de riesgo en redes sociales. Extrae contenido de YouTube, Telegram y TikTok, lo clasifica con NLP zero-shot (capa Silver) y lo presenta a analistas humanos para su validacion y promocion a la capa Gold.
+El crimen organizado recluta en redes sociales. Lo hace en publico, con codigos, en canales de Telegram, en videos de TikTok, en comentarios de YouTube. Y lo hace en tiempo real.
 
-Un orquestador inteligente coordina autonomamente los agentes de extraccion y clasificacion segun el estado del sistema y el volumen pendiente.
+**Chimalli** es una plataforma de inteligencia operativa que detecta, clasifica y documenta ese reclutamiento de forma automatica. No es solo un monitor pasivo: su orquestador despliega un bot que se infiltra en canales, perfiles y comentarios sospechosos para capturar contenido en tiempo real, antes de que desaparezca.
+
+El pipeline completo va de la extraccion automatica a la decision humana informada — con trazabilidad total en cada paso.
 
 ---
 
@@ -31,16 +33,16 @@ Un orquestador inteligente coordina autonomamente los agentes de extraccion y cl
 
 ---
 
-## Problema que resuelve
+## Capacidades del sistema
 
-La vigilancia manual de contenido en redes sociales es lenta, fragmentada y no escala. Chimalli unifica el flujo con:
-
-| Necesidad | Solucion |
+| Capacidad | Detalle |
 |---|---|
-| Multiples fuentes a monitorear | Extraccion automatica de YouTube, Telegram y TikTok |
-| Clasificacion subjetiva y lenta | NLP zero-shot multilingue con mDeBERTa |
-| Sin trazabilidad de decisiones | Arquitectura Bronze / Silver / Gold con historial |
-| Validacion humana sin contexto | Interfaz Chimalli con preview de contenido y clasificacion guiada |
+| Vigilancia continua | Extraccion automatica desde YouTube, Telegram y TikTok |
+| Infiltracion en tiempo real | Bot pescador que monitorea canales y perfiles sospechosos activamente |
+| Clasificacion inteligente | NLP zero-shot multilingue (mDeBERTa) sobre cada pieza de contenido |
+| Orquestacion autonoma | GPT-4o-mini decide que ejecutar segun el estado del sistema |
+| Validacion humana guiada | Interfaz de revision con preview de contenido y clasificacion asistida por IA |
+| Trazabilidad completa | Arquitectura Bronze / Silver / Gold con historial auditado |
 
 ---
 
@@ -50,10 +52,13 @@ La vigilancia manual de contenido en redes sociales es lenta, fragmentada y no e
 flowchart LR
     A[Orquestador\nGPT-4o-mini] --> B[Agente 1\nETL]
     A --> C[Agente 2\nNLP]
+    A --> P[Bot Pescador\nInfiltracion en tiempo real]
 
     B --> B1[YouTube ETL]
     B --> B2[Telegram ETL]
     B --> B3[TikTok ETL]
+
+    P --> B2
 
     B1 --> D[(Bronze\nMongoDB)]
     B2 --> D
@@ -66,7 +71,7 @@ flowchart LR
     E --> G[Dashboard KPIs\nReporte Golden]
 ```
 
-**Flujo resumido:** Extraccion → Bronze → Clasificacion NLP → Silver → Validacion humana → Gold
+**Flujo:** Vigilancia / Infiltracion → Bronze → Clasificacion NLP → Silver → Validacion humana → Gold
 
 ---
 
@@ -79,7 +84,8 @@ flowchart LR
 │   ├── agente2/                  # Wrapper NLP: clasifica contenido desde Bronze
 │   └── orquestador_agentes/      # Cerebro del sistema: decide que ejecutar y cuando
 ├── Apis2BD_ETL/                  # Scripts ETL por plataforma (YouTube, Telegram, TikTok)
-├── Silver2Gold_UI/               # Interfaz web de validacion humana (React + Express)
+├── Bot pescador/                 # Bot de infiltracion: monitorea canales sospechosos en tiempo real
+├── Silver2Gold_UI/               # Interfaz de validacion humana (React + Express)
 ├── Reporte_Golden_and_Honeypot/  # Dashboard de KPIs y monitoreo (TS/React/Express)
 ├── demo_reset.py                 # Reinicia datos Bronze/Silver para demo controlada
 └── requirements.txt              # Dependencias Python del pipeline
@@ -129,17 +135,15 @@ pip install playwright && playwright install chromium
 
 ### Paso 4 — Ejecutar el pipeline
 
-Elige la opcion segun tu necesidad:
-
-**Opcion A — Orquestador completo (recomendado para produccion)**
-> Lanza el sistema completo: decide automaticamente si extraer, clasificar o ambos.
+**Opcion A — Orquestador completo (recomendado)**
+> El sistema decide de forma autonoma si extraer, clasificar o ambos.
 
 ```bash
 python Agentes/orquestador_agentes/orquestador.py
 ```
 
 **Opcion B — Solo extraccion ETL (carga datos a Bronze)**
-> Util para poblar la BD sin clasificar aun.
+> Para poblar la base de datos sin clasificar aun.
 
 ```bash
 python Apis2BD_ETL/main.py          # todas las fuentes
@@ -147,8 +151,8 @@ python Apis2BD_ETL/main.py youtube  # solo YouTube
 python Apis2BD_ETL/main.py telegram # solo Telegram
 ```
 
-**Opcion C — Solo clasificacion NLP (procesa Bronze → Silver)**
-> Util si ya tienes datos en Bronze y quieres clasificarlos.
+**Opcion C — Solo clasificacion NLP (Bronze → Silver)**
+> Para clasificar datos que ya estan en Bronze.
 
 ```bash
 python Agentes/agente2/run_agente2.py todos
@@ -157,7 +161,7 @@ python Agentes/agente2/run_agente2.py telegram
 ```
 
 **Opcion D — Reset para demo**
-> Restablece Bronze y Silver a un estado de demo controlado.
+> Restablece Bronze y Silver a un estado controlado para presentacion.
 
 ```bash
 python demo_reset.py
