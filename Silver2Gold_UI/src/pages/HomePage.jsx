@@ -100,7 +100,7 @@ function HomePage({ currentUser = 'Asharet' }) {
     return (
       catalog.find((database) => database.name.toLowerCase().includes('silver')) ||
       catalog.find((database) => database.name.toLowerCase() === 'silver') ||
-      catalog.find((database) => database.name.toLowerCase() === 'centinela') || // antes: base principal
+      // catalog.find((database) => database.name.toLowerCase() === 'centinela') || // antes: base principal
       catalog[0]
     )
   }, [catalog])
