@@ -2,7 +2,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,12,20&height=240&section=header&text=404%20%7C%20Chimalli&fontSize=46&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Plataforma+de+Inteligencia+Operativa+contra+Reclutamiento+Criminal+en+Redes+Sociales&descAlignY=58&descSize=15" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=2800&pause=900&color=1F8BFF&center=true&vCenter=true&random=false&width=980&lines=Vigilancia+autonoma+en+YouTube%2C+Telegram+y+TikTok;Bot+infiltrado+en+canales+y+perfiles+sospechosos+en+tiempo+real;Clasificacion+NLP+zero-shot+multilingue+con+mDeBERTa;Validacion+humana+guiada+para+decision+operativa)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=2800&pause=900&color=1F8BFF&center=true&vCenter=true&random=false&width=980&lines=Vigilancia+aut%C3%B3noma+en+YouTube%2C+Telegram+y+TikTok;Bot+infiltrado+en+canales+y+perfiles+sospechosos+en+tiempo+real;Clasificaci%C3%B3n+de+riesgo+zero-shot+multiling%C3%BCe+con+mDeBERTa;Validaci%C3%B3n+humana+guiada+para+decisi%C3%B3n+operativa)](https://git.io/typing-svg)
 
 <br/>
 
@@ -17,13 +17,13 @@
 
 ---
 
-## ¿Que es Chimalli?
+## ¿Qué es Chimalli?
 
-El crimen organizado recluta en redes sociales. Lo hace en publico, con codigos, en canales de Telegram, en videos de TikTok, en comentarios de YouTube. Y lo hace en tiempo real.
+El crimen organizado recluta en redes sociales. Lo hace en público, con códigos, en canales de Telegram, en videos de TikTok, en comentarios de YouTube. Y lo hace en tiempo real.
 
-**Chimalli** es una plataforma de inteligencia operativa que detecta, clasifica y documenta ese reclutamiento de forma automatica. No es solo un monitor pasivo: su orquestador despliega un bot que se infiltra en canales, perfiles y comentarios sospechosos para capturar contenido en tiempo real, antes de que desaparezca.
+**Chimalli** es una plataforma de inteligencia operativa que detecta, clasifica y documenta ese reclutamiento de forma automática. Extrae publicaciones, mensajes, videos y perfiles con indicadores de narcocultura, oferta criminal y reclutamiento activo. No es solo un monitor pasivo: su orquestador despliega un bot que se infiltra en canales y perfiles sospechosos para capturar contenido en tiempo real, antes de que desaparezca.
 
-El pipeline completo va de la extraccion automatica a la decision humana informada — con trazabilidad total en cada paso.
+El pipeline completo va de la extracción automática a la decisión humana informada, con trazabilidad total en cada paso.
 
 ---
 
@@ -37,12 +37,12 @@ El pipeline completo va de la extraccion automatica a la decision humana informa
 
 | Capacidad | Detalle |
 |---|---|
-| Vigilancia continua | Extraccion automatica desde YouTube, Telegram y TikTok |
-| Infiltracion en tiempo real | Bot pescador que monitorea canales y perfiles sospechosos activamente |
-| Clasificacion inteligente | NLP zero-shot multilingue (mDeBERTa) sobre cada pieza de contenido |
-| Orquestacion autonoma | GPT-4o-mini decide que ejecutar segun el estado del sistema |
-| Validacion humana guiada | Interfaz de revision con preview de contenido y clasificacion asistida por IA |
-| Trazabilidad completa | Arquitectura Bronze / Silver / Gold con historial auditado |
+| Vigilancia continua | Recolección automática de publicaciones, mensajes y perfiles desde YouTube, Telegram y TikTok |
+| Infiltración en tiempo real | Bot pescador que monitorea activamente canales y perfiles sospechosos |
+| Clasificación inteligente | NLP zero-shot multilingüe (mDeBERTa) que identifica narcocultura, oferta criminal y reclutamiento |
+| Orquestación autónoma | GPT-4o-mini decide qué ejecutar según el estado del sistema y el volumen pendiente |
+| Validación humana guiada | Interfaz de revisión con preview del contenido original y clasificación asistida por IA |
+| Trazabilidad completa | Arquitectura Bronze / Silver / Gold con historial auditado de cada decisión |
 
 ---
 
@@ -52,7 +52,7 @@ El pipeline completo va de la extraccion automatica a la decision humana informa
 flowchart LR
     A[Orquestador\nGPT-4o-mini] --> B[Agente 1\nETL]
     A --> C[Agente 2\nNLP]
-    A --> P[Bot Pescador\nInfiltracion en tiempo real]
+    A --> P[Bot Pescador\nInfiltración en tiempo real]
 
     B --> B1[YouTube ETL]
     B --> B2[Telegram ETL]
@@ -67,11 +67,11 @@ flowchart LR
     C --> D
     C --> E[(Silver\nMongoDB)]
 
-    E --> F[Silver2Gold_UI\nValidacion humana]
+    E --> F[Silver2Gold_UI\nValidación humana]
     E --> G[Dashboard KPIs\nReporte Golden]
 ```
 
-**Flujo:** Vigilancia / Infiltracion → Bronze → Clasificacion NLP → Silver → Validacion humana → Gold
+**Flujo:** Vigilancia / Infiltración → Bronze → Clasificación NLP → Silver → Validación humana → Gold
 
 ---
 
@@ -80,12 +80,12 @@ flowchart LR
 ```text
 404/
 ├── Agentes/
-│   ├── agente1/                  # Wrapper ETL: lanza los scripts de extraccion
+│   ├── agente1/                  # Wrapper ETL: lanza los scripts de extracción
 │   ├── agente2/                  # Wrapper NLP: clasifica contenido desde Bronze
-│   └── orquestador_agentes/      # Cerebro del sistema: decide que ejecutar y cuando
+│   └── orquestador_agentes/      # Cerebro del sistema: decide qué ejecutar y cuándo
 ├── Apis2BD_ETL/                  # Scripts ETL por plataforma (YouTube, Telegram, TikTok)
-├── Bot pescador/                 # Bot de infiltracion: monitorea canales sospechosos en tiempo real
-├── Silver2Gold_UI/               # Interfaz de validacion humana (React + Express)
+├── Bot pescador/                 # Bot de infiltración: monitorea canales sospechosos en tiempo real
+├── Silver2Gold_UI/               # Interfaz de validación humana (React + Express)
 ├── Reporte_Golden_and_Honeypot/  # Dashboard de KPIs y monitoreo (TS/React/Express)
 ├── demo_reset.py                 # Reinicia datos Bronze/Silver para demo controlada
 └── requirements.txt              # Dependencias Python del pipeline
@@ -93,7 +93,7 @@ flowchart LR
 
 ---
 
-## Instalacion paso a paso
+## Instalación paso a paso
 
 ### Paso 1 — Clonar el repositorio
 
@@ -104,7 +104,7 @@ cd 404
 
 ### Paso 2 — Crear el archivo de variables de entorno
 
-Crear un archivo `.env` en la raiz del proyecto (`404/`) con las siguientes claves:
+Crear un archivo `.env` en la raíz del proyecto (`404/`) con las siguientes claves:
 
 ```env
 # Base de datos
@@ -113,7 +113,7 @@ MONGODB_URI=mongodb+srv://usuario:password@cluster/base?retryWrites=true&w=major
 # IA
 OPENAI_API_KEY=tu_openai_key
 
-# APIs de extraccion
+# APIs de extracción
 YOUTUBE_API_KEY=tu_youtube_key
 TELEGRAM_API_ID=tu_telegram_api_id
 TELEGRAM_API_HASH=tu_telegram_api_hash
@@ -135,15 +135,15 @@ pip install playwright && playwright install chromium
 
 ### Paso 4 — Ejecutar el pipeline
 
-**Opcion A — Orquestador completo (recomendado)**
-> El sistema decide de forma autonoma si extraer, clasificar o ambos.
+**Opción A — Orquestador completo (recomendado)**
+> El sistema decide de forma autónoma si extraer, clasificar o ambos.
 
 ```bash
 python Agentes/orquestador_agentes/orquestador.py
 ```
 
-**Opcion B — Solo extraccion ETL (carga datos a Bronze)**
-> Para poblar la base de datos sin clasificar aun.
+**Opción B — Solo extracción ETL (carga datos a Bronze)**
+> Para poblar la base de datos sin clasificar aún.
 
 ```bash
 python Apis2BD_ETL/main.py          # todas las fuentes
@@ -151,8 +151,8 @@ python Apis2BD_ETL/main.py youtube  # solo YouTube
 python Apis2BD_ETL/main.py telegram # solo Telegram
 ```
 
-**Opcion C — Solo clasificacion NLP (Bronze → Silver)**
-> Para clasificar datos que ya estan en Bronze.
+**Opción C — Solo clasificación NLP (Bronze → Silver)**
+> Para clasificar datos que ya están en Bronze.
 
 ```bash
 python Agentes/agente2/run_agente2.py todos
@@ -160,14 +160,14 @@ python Agentes/agente2/run_agente2.py youtube
 python Agentes/agente2/run_agente2.py telegram
 ```
 
-**Opcion D — Reset para demo**
-> Restablece Bronze y Silver a un estado controlado para presentacion.
+**Opción D — Reset para demo**
+> Restablece Bronze y Silver a un estado controlado para presentación.
 
 ```bash
 python demo_reset.py
 ```
 
-### Paso 5 — Levantar la interfaz de validacion (Silver2Gold_UI)
+### Paso 5 — Levantar la interfaz de validación (Silver2Gold_UI)
 
 ```bash
 cd Silver2Gold_UI
@@ -181,34 +181,34 @@ Esto levanta en paralelo:
 
 ---
 
-## Modulos con IA
+## Módulos con IA
 
-| Modulo | Tecnologia |
+| Módulo | Tecnología |
 |---|---|
-| Orquestador | GPT-4o-mini — razonamiento autonomo para coordinacion de tareas |
-| Agente 2 NLP | mDeBERTa multilingue — clasificacion zero-shot de contenido en riesgo |
-| ETL | Sin IA generativa — extraccion por APIs + scoring por lexico de riesgo |
+| Orquestador | GPT-4o-mini — razonamiento autónomo para coordinación de tareas |
+| Agente 2 NLP | mDeBERTa multilingüe — clasificación zero-shot de contenido en riesgo |
+| ETL | Sin IA generativa — extracción por APIs + scoring por léxico de riesgo |
 
 <details>
-<summary>Ver detalle tecnico de modelos</summary>
+<summary>Ver detalle técnico de modelos</summary>
 
 | Herramienta | Modelo | Uso | Archivo |
 |---|---|---|---|
-| OpenAI API | GPT-4o-mini | Decide correr ETL, NLP, ambos o esperar segun estado del sistema | orquestador_agentes/orquestador.py |
+| OpenAI API | GPT-4o-mini | Decide correr ETL, NLP, ambos o esperar según estado del sistema | orquestador_agentes/orquestador.py |
 | Hugging Face | zero-shot-classification | Motor de inferencia NLP sobre textos de las tres plataformas | agente2/run_agente2.py |
-| mDeBERTa | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Clasificacion semantica multilingue de contenido sospechoso | agente2/run_agente2.py |
-| PyTorch | cpu / cuda | Ejecucion del modelo con seleccion automatica de dispositivo | agente2/run_agente2.py |
+| mDeBERTa | MoritzLaurer/mDeBERTa-v3-base-mnli-xnli | Clasificación semántica multilingüe de contenido sospechoso | agente2/run_agente2.py |
+| PyTorch | cpu / cuda | Ejecución del modelo con selección automática de dispositivo | agente2/run_agente2.py |
 
 </details>
 
 ---
 
-## Tecnologias
+## Tecnologías
 
 | Capa | Herramientas |
 |---|---|
 | Pipeline / Backend | Python 3.12+, MongoDB, PyMongo, python-dotenv, tqdm |
-| Extraccion | YouTube Data API v3, Telegram via Telethon, TikTok Scraper |
+| Extracción | YouTube Data API v3, Telegram via Telethon, TikTok Scraper |
 | Modelos | OpenAI GPT-4o-mini, mDeBERTa-v3-base-mnli-xnli, PyTorch |
 | Frontend | React, Vite, Express, Mongoose |
 
@@ -216,25 +216,25 @@ Esto levanta en paralelo:
 
 ## Estado operativo
 
-- El orquestador soporta ciclos autonomos con reporte en base de conocimiento.
+- El orquestador soporta ciclos autónomos con reporte en base de conocimiento.
 - El ETL de TikTok puede requerir ajustes de scraping ante cambios de plataforma.
-- TikTok ETL esta deshabilitado temporalmente en la ejecucion automatica del orquestador.
+- TikTok ETL está deshabilitado temporalmente en la ejecución automática del orquestador.
 
 ---
 
-## Documentacion por modulo
+## Documentación por módulo
 
-| Modulo | README |
+| Módulo | README |
 |---|---|
 | Agentes (ETL, NLP, Orquestador) | [Agentes/README.md](Agentes/README.md) |
 | Dashboard de KPIs | [Reporte_Golden_and_Honeypot/README.md](Reporte_Golden_and_Honeypot/README.md) |
-| UI de validacion Silver → Gold | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
+| UI de validación Silver → Gold | [Silver2Gold_UI/README.md](Silver2Gold_UI/README.md) |
 
 ---
 
 ## Uso de IA en el desarrollo
 
-Durante el desarrollo se utilizaron **ChatGPT** y **Gemini** como asistentes de programacion para acelerar la escritura y depuracion de codigo. La arquitectura, las decisiones tecnicas, la integracion de fuentes y la logica de negocio son trabajo propio del equipo.
+Durante el desarrollo se utilizaron **ChatGPT** y **Gemini** como asistentes de programación para acelerar la escritura y depuración de código. La arquitectura, las decisiones técnicas, la integración de fuentes y la lógica de negocio son trabajo propio del equipo.
 
 ---
 
