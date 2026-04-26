@@ -368,6 +368,40 @@
   border: 1px solid #d2e3f2;
 }
 
+.tiktok-content-toggle {
+  margin-top: 0.7rem;
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.tiktok-content-toggle__button {
+  border: 1px solid #c8d9ea;
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 0.3rem 0.78rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.tiktok-content-toggle__button:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.tiktok-content-toggle__button.is-active {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+.tiktok-content-toggle__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .catalog-filters {
   border: 1px solid #d5e0eb;
   border-radius: 14px;

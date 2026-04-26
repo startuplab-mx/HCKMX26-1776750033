@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BATCH_SIZE = 5
+const TIKTOK_CONTENT_TYPES = {
+  VIDEOS: 'videos',
+  USERS: 'usuarios',
+}
 
 const LABEL_OPTIONS = [
   { value: 'seguro', label: 'Seguro', tone: 'safe' },
@@ -67,6 +71,28 @@ function getAvailableCollectionForPlatform(platform, database) {
   return candidates.find((collectionName) => database.collections.includes(collectionName)) || ''
 }
 
+function getAvailableCollectionByCandidates(database, candidates) {
+  if (!database) {
+    return ''
+  }
+
+  return candidates.find((collectionName) => database.collections.includes(collectionName)) || ''
+}
+
+function getTiktokCollectionByContentType(database, contentType) {
+  if (contentType === TIKTOK_CONTENT_TYPES.USERS) {
+    return getAvailableCollectionByCandidates(database, [
+      'tiktok_usuarios',
+      // rollback opcional: 'tiktok_usuarios_ORC',
+    ])
+  }
+
+  return getAvailableCollectionByCandidates(database, [
+    'tiktok_videos',
+    // rollback opcional: 'tiktok_videos_ORC',
+  ])
+}
+
 function HomePage({ currentUser = 'Asharet' }) {
   const [catalog, setCatalog] = useState([])
   const [catalogError, setCatalogError] = useState('')
@@ -87,6 +113,9 @@ function HomePage({ currentUser = 'Asharet' }) {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [tiktokContentType, setTiktokContentType] = useState(
+    TIKTOK_CONTENT_TYPES.VIDEOS,
+  )
   const [filterField, setFilterField] = useState('')
   const [filterValueInput, setFilterValueInput] = useState('')
   const [appliedFilter, setAppliedFilter] = useState({ field: '', value: '' })
@@ -115,8 +144,36 @@ function HomePage({ currentUser = 'Asharet' }) {
       return ''
     }
 
+    if (activePlatform === 'tiktok') {
+      const preferred = getTiktokCollectionByContentType(
+        selectedDatabase,
+        tiktokContentType,
+      )
+      if (preferred) {
+        return preferred
+      }
+
+      const fallbackType =
+        tiktokContentType === TIKTOK_CONTENT_TYPES.VIDEOS
+          ? TIKTOK_CONTENT_TYPES.USERS
+          : TIKTOK_CONTENT_TYPES.VIDEOS
+      return getTiktokCollectionByContentType(selectedDatabase, fallbackType)
+    }
+
     return getAvailableCollectionForPlatform(activeConfig, selectedDatabase)
-  }, [selectedDatabase, activeConfig])
+  }, [selectedDatabase, activeConfig, activePlatform, tiktokContentType])
+
+  const tiktokCollectionsAvailability = useMemo(
+    () => ({
+      videos: Boolean(
+        getTiktokCollectionByContentType(selectedDatabase, TIKTOK_CONTENT_TYPES.VIDEOS),
+      ),
+      usuarios: Boolean(
+        getTiktokCollectionByContentType(selectedDatabase, TIKTOK_CONTENT_TYPES.USERS),
+      ),
+    }),
+    [selectedDatabase],
+  )
 
   const activeFilters = useMemo(() => activeConfig?.filters || [], [activeConfig])
 
@@ -159,6 +216,8 @@ function HomePage({ currentUser = 'Asharet' }) {
 
   const normalizedItems = useMemo(() => {
     const documents = items || []
+    const isTiktokUsersCollection =
+      activePlatform === 'tiktok' && selectedCollection.includes('usuarios')
 
     return documents.map((document, index) => {
       const fallbackId = `${activePlatform}-${index}`
@@ -186,15 +245,41 @@ function HomePage({ currentUser = 'Asharet' }) {
         }
       }
 
+      if (isTiktokUsersCollection) {
+        return {
+          id,
+          source:
+            document.username ||
+            document.user_name ||
+            document.author ||
+            document.author_username ||
+            document.autor_username ||
+            document.channel_name ||
+            'Usuario de TikTok',
+          text:
+            document.bio ||
+            document.signature ||
+            document.descripcion ||
+            document.description ||
+            document.text ||
+            'Sin texto disponible',
+          url: document.url || document.profile_url || '',
+        }
+      }
+
       return {
         id,
         source: document.channel_name || document.author || 'Descripción del TikTok',
-         text:
-          document.descripcion || document.description || document.text || document.caption || 'Sin texto disponible',
+        text:
+          document.descripcion ||
+          document.description ||
+          document.text ||
+          document.caption ||
+          'Sin texto disponible',
         url: document.url || '',
       }
     })
-  }, [activePlatform, items])
+  }, [activePlatform, items, selectedCollection])
 
   const currentItem = normalizedItems[currentIndex] || null
   const submittedEntries = Object.entries(submittedDecisions)
@@ -250,6 +335,44 @@ function HomePage({ currentUser = 'Asharet' }) {
       try {
         const entries = await Promise.all(
           PLATFORM_CONFIG.map(async (platform) => {
+            if (platform.id === 'tiktok') {
+              const tiktokCollections = [
+                getTiktokCollectionByContentType(
+                  selectedDatabase,
+                  TIKTOK_CONTENT_TYPES.VIDEOS,
+                ),
+                getTiktokCollectionByContentType(
+                  selectedDatabase,
+                  TIKTOK_CONTENT_TYPES.USERS,
+                ),
+              ].filter(Boolean)
+
+              const uniqueCollections = [...new Set(tiktokCollections)]
+              if (uniqueCollections.length === 0) {
+                return [platform.id, 0]
+              }
+
+              const totals = await Promise.all(
+                uniqueCollections.map(async (collectionName) => {
+                  const response = await fetch(
+                    `/api/catalog/${encodeURIComponent(selectedDatabase.name)}/${encodeURIComponent(
+                      collectionName,
+                    )}/preview?skip=0&limit=1`,
+                  )
+                  const payload = await response.json()
+
+                  if (!response.ok || !payload.ok) {
+                    return 0
+                  }
+
+                  return Number.isInteger(payload.total) ? payload.total : 0
+                }),
+              )
+
+              const combinedTotal = totals.reduce((sum, total) => sum + total, 0)
+              return [platform.id, combinedTotal]
+            }
+
             const availableCollection = getAvailableCollectionForPlatform(
               platform,
               selectedDatabase,
@@ -621,6 +744,31 @@ function HomePage({ currentUser = 'Asharet' }) {
           <p className="catalog-main__eyebrow">Red social activa</p>
           <h3>{activeConfig?.label || 'Red social'}</h3>
           <p>{activeConfig?.description}</p>
+
+          {activePlatform === 'tiktok' ? (
+            <div className="tiktok-content-toggle" role="group" aria-label="Tipo de contenido TikTok">
+              <button
+                type="button"
+                className={`tiktok-content-toggle__button ${
+                  tiktokContentType === TIKTOK_CONTENT_TYPES.VIDEOS ? 'is-active' : ''
+                }`}
+                onClick={() => setTiktokContentType(TIKTOK_CONTENT_TYPES.VIDEOS)}
+                disabled={!tiktokCollectionsAvailability.videos}
+              >
+                Videos
+              </button>
+              <button
+                type="button"
+                className={`tiktok-content-toggle__button ${
+                  tiktokContentType === TIKTOK_CONTENT_TYPES.USERS ? 'is-active' : ''
+                }`}
+                onClick={() => setTiktokContentType(TIKTOK_CONTENT_TYPES.USERS)}
+                disabled={!tiktokCollectionsAvailability.usuarios}
+              >
+                Usuarios
+              </button>
+            </div>
+          ) : null}
         </header>
 
         <section className="catalog-filters">
