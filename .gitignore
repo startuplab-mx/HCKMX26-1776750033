@@ -1,5 +1,6 @@
 **/__pycache__/
 .venv
+.env
 **.pyc
 test_data/
 .DS_Store

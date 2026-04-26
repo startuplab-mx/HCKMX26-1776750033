@@ -22,9 +22,8 @@ class RetryLaterError(Exception):
 class BaseScraper():
     def __init__(self, browser_name = None, proxy=None):
         self.proxy = proxy
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Accept-Encoding': 'gzip, deflate',
+        self.headers = {
+            'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'en-US,en;q=0.9',
             'Upgrade-Insecure-Requests': '1',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -39,28 +38,34 @@ class BaseScraper():
             'sec-fetch-site': 'none',
             'sec-fetch-user': '?1',
             'referer': 'https://www.tiktok.com/',
-        })
-        if proxy:
-            self.session.proxies.update(proxy)
+        }
+        self.cookies = dict()
         if browser_name:
             self.set_browser(browser_name)
-
+    
     def set_browser(self, browser_name) -> None:
-        cookies = getattr(browser_cookie3, browser_name)(domain_name='.tiktok.com')
-        self.session.cookies.update(cookies)
+        self.cookies = getattr(browser_cookie3, browser_name)(domain_name='.tiktok.com')  # Inspired by pyktok
 
     def set_proxy(self, proxy) -> None:
         self.proxy = proxy
-        self.session.proxies.update(proxy)
+        return
 
     def request_and_retain_cookies(self, url, retain = True) -> requests.Response:
-        response = self.session.get(
-            url,
-            allow_redirects=True,
-            timeout=20,
-            stream=False,
-        )
-        return response
+            
+            response = requests.get(url,
+                    allow_redirects=True, # may have to set to True
+                    headers=self.headers,
+                    cookies=self.cookies,
+                    timeout=20,
+                    stream=False,
+                    proxies=self.proxy
+            )
+            
+            # retain any new cookies that got set in this request
+            if retain:
+                self.cookies = response.cookies
+
+            return response
 
     def scrape_metadata(self, video_id) -> dict:
 
@@ -74,13 +79,8 @@ class BaseScraper():
             if script_tag is not None:
                 break # success
             else:
-                title = soup.find('title')
-                print(f"    [DEBUG] intento {retries+1}: status={response.status_code}  url_final={response.url[:80]}")
-                print(f"    [DEBUG] content-type: {response.headers.get('content-type', 'N/A')}")
-                print(f"    [DEBUG] título página: {title.text.strip() if title else 'N/A'}")
-                print(f"    [DEBUG] body[:300]: {response.text[:300]!r}")
                 retries += 1
-                time.sleep(2)
+                time.sleep(0.1)
         else:
             if script_tag is None: raise KeyError("__UNIVERSAL_DATA_FOR_REHYDRATION__ not in response")
 
