@@ -42,8 +42,6 @@ CARPETA_SALIDA     = str(_SCRIPT_DIR / "datos_tiktok")
 WAIT_TIME          = 1.0
 DESCARGAR_ARCHIVOS = False
 
-# ─────────────────────────────────────────────
-
 
 def conectar_mongo():
     """Conecta a MongoDB Atlas y devuelve (db, col_videos, col_usuarios)."""
@@ -53,7 +51,7 @@ def conectar_mongo():
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=8000)
     client.admin.command("ping")          # lanza excepción si falla
     db = client[DB_NAME]
-    print(f"✅ Conectado → base de datos: '{DB_NAME}'\n")
+    print(f"Conectado a la base de datos: '{DB_NAME}'\n")
     return db, db[VIDEOS_COL], db[USUARIOS_COL]
 
 
@@ -61,11 +59,11 @@ def leer_ids(archivo: str) -> list[str]:
     """Lee IDs de video desde un archivo de texto."""
     ruta = Path(archivo)
     if not ruta.exists():
-        print(f"❌ Archivo '{archivo}' no encontrado.")
-        print("   Crea un archivo con IDs de video, uno por línea.")
+        print(f"Archivo '{archivo}' no encontrado.")
+        print("   Crea un archivo con IDs de video, uno por linea.")
         return []
     ids = [l.strip() for l in ruta.read_text().splitlines() if l.strip()]
-    print(f"📋 {len(ids)} IDs cargados desde {archivo}")
+    print(f"{len(ids)} IDs cargados desde {archivo}")
     return ids
 
 
@@ -87,18 +85,18 @@ def scrapear_videos(ids: list[str]):
         scraper.scrape_pending(
             only_content=True,
             scrape_files=DESCARGAR_ARCHIVOS)
-        print("✅ Scraping completado\n")
+        print("Scraping completado\n")
     except AssertionError:
         # Todos los IDs ya estaban en progreso.db (scrapeados antes)
         # Los JSONs ya existen en carpeta, se cargarán igual a MongoDB
-        print("ℹ️  Todos los IDs ya fueron scrapeados. Cargando JSONs existentes...\n")
+        print("Todos los IDs ya fueron scrapeados. Cargando JSONs existentes...\n")
 
 
 def leer_jsons_videos() -> list[dict]:
     """Lee todos los JSON de metadata ya descargados."""
     carpeta = Path(CARPETA_SALIDA) / "content_metadata"
     if not carpeta.exists():
-        print(f"⚠️  Carpeta {carpeta} no encontrada.")
+        print(f"Carpeta {carpeta} no encontrada.")
         return []
 
     videos = []
@@ -106,8 +104,8 @@ def leer_jsons_videos() -> list[dict]:
         try:
             videos.append(json.loads(f.read_text(encoding="utf-8")))
         except Exception as e:
-            print(f"  ⚠️  Error leyendo {f.name}: {e}")
-    print(f"📂 {len(videos)} archivos JSON leídos")
+            print(f"  Error leyendo {f.name}: {e}")
+    print(f"{len(videos)} archivos JSON leidos")
     return videos
 
 
@@ -183,7 +181,7 @@ def upsert_a_mongo(col_videos, col_usuarios, videos_raw: list[dict]):
         usr = doc_usuario.get("_id")
 
         if not vid:
-            print(f"  ⚠️  Video sin ID, omitido")
+            print("  Video sin ID, omitido")
             continue
 
         # Video: upsert por _id
@@ -198,7 +196,7 @@ def upsert_a_mongo(col_videos, col_usuarios, videos_raw: list[dict]):
             )
             usuarios_vistos.add(usr)
 
-    # ── Escritura a MongoDB ──
+    # Escritura a MongoDB
     videos_ok = usuarios_ok = 0
 
     if ops_videos:
@@ -206,17 +204,17 @@ def upsert_a_mongo(col_videos, col_usuarios, videos_raw: list[dict]):
             res = col_videos.bulk_write(ops_videos, ordered=False)
             videos_ok = res.upserted_count + res.modified_count
         except BulkWriteError as bwe:
-            print(f"  ⚠️  Errores parciales en videos: {bwe.details}")
+            print(f"  Errores parciales en videos: {bwe.details}")
 
     if ops_usuarios:
         try:
             res = col_usuarios.bulk_write(ops_usuarios, ordered=False)
             usuarios_ok = res.upserted_count + res.modified_count
         except BulkWriteError as bwe:
-            print(f"  ⚠️  Errores parciales en usuarios: {bwe.details}")
+            print(f"  Errores parciales en usuarios: {bwe.details}")
 
-    print(f"✅ Videos guardados/actualizados:   {videos_ok} / {len(ops_videos)}")
-    print(f"✅ Usuarios guardados/actualizados: {usuarios_ok} / {len(ops_usuarios)}")
+    print(f"Videos guardados/actualizados:   {videos_ok} / {len(ops_videos)}")
+    print(f"Usuarios guardados/actualizados: {usuarios_ok} / {len(ops_usuarios)}")
 
 
 def crear_indices(col_videos, col_usuarios):
@@ -225,12 +223,8 @@ def crear_indices(col_videos, col_usuarios):
     col_videos.create_index("hashtags")
     col_videos.create_index("fecha_publicacion")
     col_usuarios.create_index("username", unique=True)
-    print("📑 Índices creados\n")
+    print("Indices creados\n")
 
-
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
 
 def main():
     print("=" * 60)
@@ -252,11 +246,11 @@ def main():
     # 4. Leer JSONs descargados
     videos_raw = leer_jsons_videos()
     if not videos_raw:
-        print("⚠️  No hay datos que cargar a MongoDB.")
+        print("No hay datos que cargar a MongoDB.")
         return
 
     # 5. Cargar a MongoDB
-    print("💾 Cargando a MongoDB...")
+    print("Cargando a MongoDB...")
     upsert_a_mongo(col_videos, col_usuarios, videos_raw)
 
     # 6. Resumen final
@@ -267,7 +261,7 @@ def main():
     print(f"  • Colección '{VIDEOS_COL}':   {total_videos} documentos")
     print(f"  • Colección '{USUARIOS_COL}': {total_usuarios} documentos")
     print(f"{'='*60}\n")
-    print("🎉 ¡Proceso completado!")
+    print("Proceso completado!")
 
 
 if __name__ == "__main__":

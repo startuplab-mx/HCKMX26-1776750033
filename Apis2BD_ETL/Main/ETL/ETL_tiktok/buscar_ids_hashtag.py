@@ -20,10 +20,6 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-# ─────────────────────────────────────────────
-# CONFIGURACIÓN
-# ─────────────────────────────────────────────
-
 _ETL_TIKTOK_DIR = Path(__file__).parent
 ARCHIVO_SALIDA   = str(_ETL_TIKTOK_DIR / "videos.txt")  # sobreescribible desde etl_tiktok.py
 
@@ -48,12 +44,10 @@ HEADLESS         = False  # False = abre ventana (útil para pasar captcha la 1�
 PAUSA_SCROLL_MS  = 2000  # ms entre scrolls
 PAUSA_HASHTAG_S  = 3     # segundos entre hashtags
 
-# ─────────────────────────────────────────────
-
 
 async def ids_de_hashtag(page, hashtag: str, max_videos: int) -> list[str]:
     url = f"https://www.tiktok.com/tag/{hashtag}"
-    print(f"\n🔍 #{hashtag}")
+    print(f"\n#{hashtag}")
 
     ids: set[str] = set()
 
@@ -81,7 +75,7 @@ async def ids_de_hashtag(page, hashtag: str, max_videos: int) -> list[str]:
             await page.wait_for_timeout(PAUSA_SCROLL_MS)
 
     except Exception as e:
-        print(f"\n   ❌ Error en #{hashtag}: {e}")
+        print(f"\n   Error en #{hashtag}: {e}")
 
     resultado = list(ids)[:max_videos]
     print(f"   → {len(resultado)} IDs obtenidos")
@@ -122,7 +116,7 @@ async def main():
 
     nuevos_netos = len(set(ids_lista) - existentes)
     print(f"\n{'='*50}")
-    print(f"✅ {len(ids_lista)} IDs encontrados ({nuevos_netos} nuevos)")
+    print(f"{len(ids_lista)} IDs encontrados ({nuevos_netos} nuevos)")
     print(f"   Total en '{ARCHIVO_SALIDA}': {len(combinados)}")
     print(f"\n   Siguiente paso:")
     print(f"   python script.py")
